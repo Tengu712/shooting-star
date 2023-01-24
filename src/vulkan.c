@@ -1,20 +1,42 @@
+#define VK_USE_PLATFORM_XCB_KHR
 #include <vulkan/vulkan.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define CHECK(p) if (res != VK_SUCCESS) (p)
+#include "vulkan.h"
+
+#define CHECK(p) if (res != VK_SUCCESS) return (p);
 #define EMSG_ENUM_INST_EXT_PROPS 1
 #define EMSG_CREATE_INST 2
 #define EMSG_ENUM_PHYS_DEVICES 3
 #define EMSG_FIND_QUEUE_FAMILY_INDEX 4
 #define EMSG_ENUM_DEVICE_EXT_PROPS 5
 #define EMSG_CREATE_DEVICE 6
+#define EMSG_CREATE_SURFACE 7
+#define EMSG_GET_SURFACE_FORMATS 8
+#define EMSG_GET_SURFACE_CAPABILITIES 9
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
 VkDevice g_device;
+VkSurfaceKHR g_surface;
+uint32_t g_width;
+uint32_t g_height;
 
-int skd_init_vulkan() {
+int create_xcb_surface(SkdWindowUnion *window_param) {
+    const VkXcbSurfaceCreateInfoKHR ci = {
+        VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
+        NULL,
+        0,
+        window_param->xcb_window.connection,
+        window_param->xcb_window.window,
+    };
+    VkResult res = vkCreateXcbSurfaceKHR(g_instance, &ci, NULL, &g_surface);
+    CHECK(0);
+    return 1;
+}
+
+int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     VkResult res;
 
     // instance
@@ -167,12 +189,64 @@ int skd_init_vulkan() {
     free((char**)device_exts);
     free(device_ext_props);
 
+    // surface
+    switch (window_kind) {
+        case SKD_WIN_KIND_XCB:
+            if (create_xcb_surface(window_param) != 1) {
+                return EMSG_CREATE_SURFACE;
+            }
+            break;
+        default:
+            return EMSG_CREATE_SURFACE;
+    }
+    uint32_t surface_formats_cnt = 0;
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        phys_device,
+        g_surface,
+        &surface_formats_cnt,
+        NULL
+    );
+    CHECK(EMSG_GET_SURFACE_FORMATS);
+    VkSurfaceFormatKHR *surface_formats = 
+        (VkSurfaceFormatKHR *)
+        malloc(sizeof(VkSurfaceFormatKHR) * surface_formats_cnt);
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        phys_device,
+        g_surface,
+        &surface_formats_cnt,
+        surface_formats
+    );
+    CHECK(EMSG_GET_SURFACE_FORMATS);
+    int surface_format_index = -1;
+    for (int i = 0; i < surface_formats_cnt; ++i) {
+        if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
+            surface_format_index = i;
+            break;
+        }
+    }
+    if (surface_format_index == -1) {
+        return EMSG_GET_SURFACE_FORMATS;
+    }
+    const VkSurfaceFormatKHR surface_format =
+        surface_formats[surface_format_index];
+    VkSurfaceCapabilitiesKHR surface_capabilities;
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        phys_device,
+        g_surface,
+        &surface_capabilities
+    );
+    CHECK(EMSG_GET_SURFACE_CAPABILITIES);
+    g_width = surface_capabilities.currentExtent.width;
+    g_height = surface_capabilities.currentExtent.height;
+    free(surface_formats);
+
     // finish
     return 0;
 }
 
-void skd_terminate_vulkan() {
+void skd_terminate_vulkan(void) {
     if (g_device != NULL) vkDeviceWaitIdle(g_device);
+    if (g_surface != NULL) vkDestroySurfaceKHR(g_instance, g_surface, NULL);
     if (g_device != NULL) vkDestroyDevice(g_device, NULL);
     if (g_instance != NULL) vkDestroyInstance(g_instance, NULL);
 }
