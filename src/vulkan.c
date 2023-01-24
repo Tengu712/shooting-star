@@ -19,6 +19,7 @@
 #define EMSG_CREATE_SWAPCHAIN 11
 #define EMSG_GET_IMAGES 12
 #define EMSG_CREATE_IMAGE_VIEW 13
+#define EMSG_CREATE_FRAMEBUFFER 14
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
@@ -30,6 +31,7 @@ VkRenderPass g_render_pass;
 VkSwapchainKHR g_swapchain;
 uint32_t g_images_cnt;
 VkImageView *g_image_views;
+VkFramebuffer *g_framebuffers;
 
 int create_xcb_surface(SkdWindowUnion *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -366,6 +368,31 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     }
     free(images);
 
+    // framebuffers
+    VkFramebufferCreateInfo frame_buffer_create_info = {
+        VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        NULL,
+        0,
+        g_render_pass,
+        1,
+        NULL,
+        g_width,
+        g_height,
+        1,
+    };
+    g_framebuffers =
+        (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * g_images_cnt);
+    for (int i = 0; i < g_images_cnt; ++i) {
+        frame_buffer_create_info.pAttachments = &g_image_views[i];
+        res = vkCreateFramebuffer(
+            g_device,
+            &frame_buffer_create_info,
+            NULL,
+            &g_framebuffers[i]
+        );
+        CHECK(EMSG_CREATE_FRAMEBUFFER);
+    }
+
     // finish
     return 0;
 }
@@ -373,8 +400,12 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
     for (int i = 0; i < g_images_cnt; ++i) {
+        vkDestroyFramebuffer(g_device, g_framebuffers[i], NULL);
+    }
+    for (int i = 0; i < g_images_cnt; ++i) {
         vkDestroyImageView(g_device, g_image_views[i], NULL);
     }
+    free(g_framebuffers);
     free(g_image_views);
     vkDestroySwapchainKHR(g_device, g_swapchain, NULL);
     vkDestroyRenderPass(g_device, g_render_pass, NULL);
