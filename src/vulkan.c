@@ -15,6 +15,7 @@
 #define EMSG_CREATE_SURFACE 7
 #define EMSG_GET_SURFACE_FORMATS 8
 #define EMSG_GET_SURFACE_CAPABILITIES 9
+#define EMSG_CREATE_RENDER_PASS 10
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
@@ -22,6 +23,7 @@ VkDevice g_device;
 VkSurfaceKHR g_surface;
 uint32_t g_width;
 uint32_t g_height;
+VkRenderPass g_render_pass;
 
 int create_xcb_surface(SkdWindowUnion *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -240,13 +242,66 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     g_height = surface_capabilities.currentExtent.height;
     free(surface_formats);
 
+    // render pass
+    const VkAttachmentDescription attachment_desc = {
+        0,
+        surface_format.format,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_ATTACHMENT_LOAD_OP_CLEAR,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    };
+    const VkAttachmentReference attachment_ref = {
+        0,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+    const VkSubpassDescription subpass_desc = {
+        0,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        0,
+        NULL,
+        1,
+        &attachment_ref,
+        NULL,
+        NULL,
+        0,
+        NULL,
+    };
+    const VkRenderPassCreateInfo render_pass_create_info = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        NULL,
+        0,
+        1,
+        &attachment_desc,
+        1,
+        &subpass_desc,
+        0,
+        NULL,
+    };
+    res = vkCreateRenderPass(
+        g_device,
+        &render_pass_create_info,
+        NULL,
+        &g_render_pass
+    );
+    CHECK(EMSG_CREATE_RENDER_PASS);
+
     // finish
     return 0;
 }
 
 void skd_terminate_vulkan(void) {
-    if (g_device != NULL) vkDeviceWaitIdle(g_device);
-    if (g_surface != NULL) vkDestroySurfaceKHR(g_instance, g_surface, NULL);
-    if (g_device != NULL) vkDestroyDevice(g_device, NULL);
-    if (g_instance != NULL) vkDestroyInstance(g_instance, NULL);
+    if (g_device != NULL)
+        vkDeviceWaitIdle(g_device);
+    if (g_render_pass != NULL)
+        vkDestroyRenderPass(g_device, g_render_pass, NULL);
+    if (g_surface != NULL)
+        vkDestroySurfaceKHR(g_instance, g_surface, NULL);
+    if (g_device != NULL)
+        vkDestroyDevice(g_device, NULL);
+    if (g_instance != NULL)
+        vkDestroyInstance(g_instance, NULL);
 }
