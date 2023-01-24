@@ -22,9 +22,10 @@ int main() {
     res = skd_init_vulkan(SKD_WIN_KIND_XCB, &window_param);
     CHECK("failed to init Vulkan.\n");
     while (1) {
-        if (skd_do_window_events() == 1) {
-            break;
-        }
+        if (skd_do_window_events() == 1) break;
+        unsigned int id;
+        if (!skd_begin_render(&id, 1.0f, 0.0f, 0.0f)) break;
+        if (!skd_end_render(id)) break;
     }
     skd_terminate_vulkan();
     skd_terminate_window();

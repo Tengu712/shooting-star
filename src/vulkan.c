@@ -38,12 +38,10 @@ VkImageView *g_image_views;
 VkFramebuffer *g_framebuffers;
 VkQueue g_queue;
 VkCommandPool g_command_pool;
-uint32_t g_command_buffers_cnt;
 VkCommandBuffer *g_command_buffers;
-uint32_t g_fences_cnt;
 VkFence *g_fences;
-uint32_t g_semaphores_cnt;
-VkSemaphore *g_semaphores;
+VkSemaphore g_render_semaphore;
+VkSemaphore g_present_semaphore;
 
 int create_xcb_surface(SkdWindowUnion *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -424,17 +422,15 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     CHECK(EMSG_CREATE_COMMAND_POOL);
 
     // command buffers
-    g_command_buffers_cnt = 1;
     const VkCommandBufferAllocateInfo command_buffer_allocate_info = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         NULL,
         g_command_pool,
         VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        g_command_buffers_cnt,
+        g_images_cnt,
     };
     g_command_buffers =
-        (VkCommandBuffer *)
-        malloc(sizeof(VkCommandBuffer) * g_command_buffers_cnt);
+        (VkCommandBuffer *)malloc(sizeof(VkCommandBuffer) * g_images_cnt);
     res = vkAllocateCommandBuffers(
         g_device,
         &command_buffer_allocate_info,
@@ -443,35 +439,37 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     CHECK(EMSG_ALLOCATE_COMMAND_BUFFERS);
 
     // fences
-    g_fences_cnt = 1;
     const VkFenceCreateInfo fence_create_info = {
         VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         NULL,
         VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    g_fences = (VkFence *)malloc(sizeof(VkFence) * g_fences_cnt);
-    for (int i = 0; i < g_fences_cnt; ++i) {
+    g_fences = (VkFence *)malloc(sizeof(VkFence) * g_images_cnt);
+    for (int i = 0; i < g_images_cnt; ++i) {
         res = vkCreateFence(g_device, &fence_create_info, NULL, &g_fences[i]);
         CHECK(EMSG_CREATE_FENCE);
     }
 
     // semaphores
-    g_semaphores_cnt = 2;
     const VkSemaphoreCreateInfo semaphore_create_info = {
         VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         NULL,
         0,
     };
-    g_semaphores = (VkSemaphore*)malloc(sizeof(VkSemaphore) * g_semaphores_cnt);
-    for (int i = 0; i < g_semaphores_cnt; ++i) {
-        res = vkCreateSemaphore(
-            g_device,
-            &semaphore_create_info,
-            NULL,
-            &g_semaphores[i]
-        );
-        CHECK(EMSG_CREATE_SEMAPHORE);
-    }
+    res = vkCreateSemaphore(
+        g_device,
+        &semaphore_create_info,
+        NULL,
+        &g_render_semaphore
+    );
+    CHECK(EMSG_CREATE_SEMAPHORE);
+    res = vkCreateSemaphore(
+        g_device,
+        &semaphore_create_info,
+        NULL,
+        &g_present_semaphore
+    );
+    CHECK(EMSG_CREATE_SEMAPHORE);
 
     // finish
     return 0;
@@ -479,18 +477,16 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
 
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
-    for (int i = 0; i < g_semaphores_cnt; ++i) {
-        vkDestroySemaphore(g_device, g_semaphores[i], NULL);
-    }
-    for (int i = 0; i < g_fences_cnt; ++i) {
+    vkDestroySemaphore(g_device, g_present_semaphore, NULL);
+    vkDestroySemaphore(g_device, g_render_semaphore, NULL);
+    for (int i = 0; i < g_images_cnt; ++i) {
         vkDestroyFence(g_device, g_fences[i], NULL);
     }
-    free(g_semaphores);
     free(g_fences);
     vkFreeCommandBuffers(
         g_device,
         g_command_pool,
-        g_command_buffers_cnt,
+        g_images_cnt,
         g_command_buffers
     );
     vkDestroyCommandPool(g_device, g_command_pool, NULL);
@@ -507,4 +503,101 @@ void skd_terminate_vulkan(void) {
     vkDestroySurfaceKHR(g_instance, g_surface, NULL);
     vkDestroyDevice(g_device, NULL);
     vkDestroyInstance(g_instance, NULL);
+}
+
+int skd_begin_render(unsigned int *p_id, float r, float g, float b) {
+    VkResult res;
+    // get next image index
+    uint32_t next_image_idx;
+    res = vkAcquireNextImageKHR(
+        g_device,
+        g_swapchain,
+        UINT64_MAX,
+        g_present_semaphore,
+        VK_NULL_HANDLE,
+        &next_image_idx
+    );
+    CHECK(0);
+    // wait for a fence
+    res = vkWaitForFences(
+        g_device,
+        1,
+        &g_fences[next_image_idx],
+        VK_TRUE,
+        UINT64_MAX
+    );
+    CHECK(0);
+    // begin command buffer
+    const VkCommandBuffer command = g_command_buffers[next_image_idx];
+    const VkCommandBufferBeginInfo command_buffer_begin_info = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        NULL,
+        0,
+        NULL,
+    };
+    res = vkBeginCommandBuffer(command, &command_buffer_begin_info);
+    CHECK(0);
+    // begin render pass
+    const VkClearValue clear_value = { r, g, b, 0.0f };
+    const VkExtent2D extent = { g_width, g_height };
+    const VkRenderPassBeginInfo render_pass_begin_info = {
+        VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        NULL,
+        g_render_pass,
+        g_framebuffers[next_image_idx],
+        { {0, 0}, extent },
+        1,
+        &clear_value,
+    };
+    vkCmdBeginRenderPass(
+        command,
+        &render_pass_begin_info,
+        VK_SUBPASS_CONTENTS_INLINE
+    );
+    // finish
+    *p_id = next_image_idx;
+    return 1;
+}
+
+int skd_end_render(unsigned int id) {
+    VkResult res;
+    const VkCommandBuffer command = g_command_buffers[id];
+    const VkFence fence = g_fences[id];
+    // end
+    vkCmdEndRenderPass(command);
+    vkEndCommandBuffer(command);
+    // reset fences
+    res = vkResetFences(g_device, 1, &fence);
+    CHECK(0);
+    // submit
+    const VkPipelineStageFlags wait_stage_mask =
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    const VkSubmitInfo submit_info = {
+        VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        NULL,
+        1,
+        &g_present_semaphore,
+        &wait_stage_mask,
+        1,
+        &command,
+        1,
+        &g_render_semaphore,
+    };
+    res = vkQueueSubmit(g_queue, 1, &submit_info, fence);
+    CHECK(0);
+    // present
+    VkPresentInfoKHR present_info = {
+        VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        NULL,
+        1,
+        &g_render_semaphore,
+        1,
+        &g_swapchain,
+        &id,
+        &res,
+    };
+    res = vkQueuePresentKHR(g_queue, &present_info);
+    CHECK(0);
+    // finish
+    return 1;
 }
