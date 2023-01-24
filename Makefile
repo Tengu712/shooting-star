@@ -1,9 +1,11 @@
-main:	tmp/window.o src/main.c
-	gcc -o main \
-	  src/main.c \
-	  tmp/window.o \
-	  -lxcb
-tmp/window.o:	src/window.c
-	gcc -c -o tmp/window.o src/window.c
+.PHONY: build_linux
+.PHONY: clean
+
+build_linux:	window_linux.o
+	ar r libfireball.a \
+	 tmp/window_linux.o
+window_linux.o:	src/window_linux.c
+	gcc -c -o tmp/window_linux.o src/window_linux.c
 clean:
-	rm -rf main tmp
+	rm -rf libfireball.a tmp
+	mkdir tmp

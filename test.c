@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "window.h"
+#include "src/window.h"
 
 int main() {
     int res = skd_create_window(640, 480);

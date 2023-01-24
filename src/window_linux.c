@@ -16,14 +16,14 @@ const char *g_window_error_message[WINDOW_ERROR_MESSAGE_COUNT] = {
 };
 
 const char *skd_get_window_error_message(int res) {
-    if (res <= 0 || res >= WINDOW_ERROR_MESSAGE_COUNT) {
-        return "unexpected";
-    } else {
+    if (res > 0 && res < WINDOW_ERROR_MESSAGE_COUNT) {
         return g_window_error_message[res - 1];
+    } else {
+        return "unexpected";
     }
 }
 
-int skd_create_window(uint16_t width, uint16_t height) {
+int skd_create_window(unsigned short width, unsigned short height) {
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
