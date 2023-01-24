@@ -17,6 +17,8 @@
 #define EMSG_GET_SURFACE_CAPABILITIES 9
 #define EMSG_CREATE_RENDER_PASS 10
 #define EMSG_CREATE_SWAPCHAIN 11
+#define EMSG_GET_IMAGES 12
+#define EMSG_CREATE_IMAGE_VIEW 13
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
@@ -26,6 +28,8 @@ uint32_t g_width;
 uint32_t g_height;
 VkRenderPass g_render_pass;
 VkSwapchainKHR g_swapchain;
+uint32_t g_images_cnt;
+VkImageView *g_image_views;
 
 int create_xcb_surface(SkdWindowUnion *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -323,15 +327,58 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     );
     CHECK(EMSG_CREATE_SWAPCHAIN);
 
+    // image views
+    res = vkGetSwapchainImagesKHR(g_device, g_swapchain, &g_images_cnt, NULL);
+    CHECK(EMSG_GET_IMAGES);
+    VkImage *images = (VkImage *)malloc(sizeof(VkImage) * g_images_cnt);
+    res = vkGetSwapchainImagesKHR(g_device, g_swapchain, &g_images_cnt, images);
+    CHECK(EMSG_GET_IMAGES);
+    g_image_views = (VkImageView *)malloc(sizeof(VkImageView) * g_images_cnt);
+    for (int i = 0; i < g_images_cnt; ++i) {
+        VkImageViewCreateInfo image_view_create_info = {
+            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            NULL,
+            0,
+            images[i],
+            VK_IMAGE_VIEW_TYPE_2D,
+            surface_format.format,
+            {
+                VK_COMPONENT_SWIZZLE_R,
+                VK_COMPONENT_SWIZZLE_G,
+                VK_COMPONENT_SWIZZLE_B,
+                VK_COMPONENT_SWIZZLE_A,
+            },
+            {
+                VK_IMAGE_ASPECT_COLOR_BIT,
+                0,
+                1,
+                0,
+                1,
+            }
+        };
+        res = vkCreateImageView(
+            g_device,
+            &image_view_create_info,
+            NULL,
+            &g_image_views[i]
+        );
+        CHECK(EMSG_CREATE_IMAGE_VIEW);
+    }
+    free(images);
+
     // finish
     return 0;
 }
 
 void skd_terminate_vulkan(void) {
-   vkDeviceWaitIdle(g_device);
-   vkDestroySwapchainKHR(g_device, g_swapchain, NULL);
-   vkDestroyRenderPass(g_device, g_render_pass, NULL);
-   vkDestroySurfaceKHR(g_instance, g_surface, NULL);
-   vkDestroyDevice(g_device, NULL);
-   vkDestroyInstance(g_instance, NULL);
+    vkDeviceWaitIdle(g_device);
+    for (int i = 0; i < g_images_cnt; ++i) {
+        vkDestroyImageView(g_device, g_image_views[i], NULL);
+    }
+    free(g_image_views);
+    vkDestroySwapchainKHR(g_device, g_swapchain, NULL);
+    vkDestroyRenderPass(g_device, g_render_pass, NULL);
+    vkDestroySurfaceKHR(g_instance, g_surface, NULL);
+    vkDestroyDevice(g_device, NULL);
+    vkDestroyInstance(g_instance, NULL);
 }
