@@ -16,6 +16,7 @@ int main() {
     }
     while (1) {
         if (skd_do_window_events() == 1) {
+            skd_terminate_vulkan();
             skd_terminate_window();
             return 0;
         }
