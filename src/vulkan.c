@@ -43,20 +43,20 @@ VkFence *g_fences;
 VkSemaphore g_render_semaphore;
 VkSemaphore g_present_semaphore;
 
-int create_xcb_surface(SkdWindowUnion *window_param) {
+int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
         VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
-        window_param->xcb_window.connection,
-        window_param->xcb_window.window,
+        window_param->data.xcb_window.connection,
+        window_param->data.xcb_window.window,
     };
     VkResult res = vkCreateXcbSurfaceKHR(g_instance, &ci, NULL, &g_surface);
     CHECK(0);
     return 1;
 }
 
-int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
+int skd_init_vulkan(SkdWindowParam *window_param) {
     VkResult res;
 
     // instance
@@ -210,7 +210,7 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     free(device_ext_props);
 
     // surface
-    switch (window_kind) {
+    switch (window_param->kind) {
         case SKD_WIN_KIND_XCB:
             if (create_xcb_surface(window_param) != 1) {
                 return EMSG_CREATE_SURFACE;

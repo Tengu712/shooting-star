@@ -1,8 +1,9 @@
 #pragma once
 
-// Getters
-void *skd_get_connection(void);
-unsigned int skd_get_window(void);
+#include "common_window_vulkan.h"
+
+// A function to create window param based on each implementation.
+SkdWindowParam *skd_create_window_param(void);
 
 // A function to get error message.
 const char *skd_get_window_error_message(int res);
