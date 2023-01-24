@@ -3,13 +3,9 @@
 #include "src/window.h"
 
 int main() {
-    int res = skd_create_window(640, 480);
+    int res = skd_create_window("test program", 640, 480);
     if (res != 0) {
-        fprintf(
-            stderr,
-            "failed to create a window: %s\n",
-            skd_get_window_error_message(res)
-        );
+        fprintf(stderr, "failed to create a window.\n");
         return res;
     }
     while (1) {

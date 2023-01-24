@@ -1,44 +1,41 @@
 #include <xcb/xcb.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "window.h"
+
+typedef struct {
+    uint32_t flags;
+    int32_t x, y;
+    int32_t width, height;
+    int32_t min_width, min_height;
+    int32_t max_width, max_height;
+    int32_t width_inc, height_inc;
+    int32_t min_aspect_num, min_aspect_den;
+    int32_t max_aspect_num, max_aspect_den;
+    int32_t base_width, base_height;
+    uint32_t win_gravity;
+} XSizeHints;
 
 xcb_connection_t *g_connection;
 xcb_intern_atom_reply_t *g_atom_delete_window;
 
-#define WINDOW_ERROR_MESSAGE_COUNT 5
-const char *g_window_error_message[WINDOW_ERROR_MESSAGE_COUNT] = {
-    "failed to connect with X server",
-    "failed to get a setup",
-    "failed to get a screen",
-    "failed to create a window",
-    "failed to change property for detect window closing event",
-};
-
-const char *skd_get_window_error_message(int res) {
-    if (res > 0 && res < WINDOW_ERROR_MESSAGE_COUNT) {
-        return g_window_error_message[res - 1];
-    } else {
-        return "unexpected";
-    }
-}
-
-int skd_create_window(unsigned short width, unsigned short height) {
+int skd_create_window(const char *title, unsigned short width, unsigned short height) {
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
     if (xcb_connection_has_error(g_connection)) {
-        return 1;
+        return WINDOW_ERROR_MESSAGE_CONNECT_X;
     }
     // screen
     const xcb_setup_t *setup = xcb_get_setup(g_connection);
     if (setup == NULL) {
-        return 2;
+        return WINDOW_ERROR_MESSAGE_GET_SETUP;
     }
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
     xcb_screen_t *screen = iter.data;
     if (screen == NULL) {
-        return 3;
+        return WINDOW_ERROR_MESSAGE_GET_SCREEN;
     }
     // window
     const uint32_t value_list[1] = {
@@ -61,7 +58,42 @@ int skd_create_window(unsigned short width, unsigned short height) {
         value_list
     );
     if (xcb_request_check(g_connection, res) != NULL) {
-        return 4;
+        return WINDOW_ERROR_MESSAGE_CREATE_WINDOW;
+    }
+    // title
+    res = xcb_change_property(
+        g_connection,
+        XCB_PROP_MODE_REPLACE,
+        window,
+        XCB_ATOM_WM_NAME,
+        XCB_ATOM_STRING,
+        8,
+        strlen(title),
+        title
+    );
+    if (xcb_request_check(g_connection, res) != NULL) {
+        return WINDOW_ERROR_MESSAGE_CHANGE_PROPERTY;
+    }
+    // disable resize
+    XSizeHints size_hints;
+    memset(&size_hints, 0, sizeof(XSizeHints));
+    size_hints.flags = (1 << 4) | (1 << 5);
+    size_hints.max_width = (int)width;
+    size_hints.min_width = (int)width;
+    size_hints.max_height = (int)height;
+    size_hints.min_height = (int)height;
+    res = xcb_change_property(
+        g_connection,
+        XCB_PROP_MODE_REPLACE,
+        window,
+        XCB_ATOM_WM_NORMAL_HINTS,
+        XCB_ATOM_WM_SIZE_HINTS,
+        32,
+        sizeof(XSizeHints) >> 2,
+        &size_hints
+    );
+    if (xcb_request_check(g_connection, res) != NULL) {
+        return WINDOW_ERROR_MESSAGE_CHANGE_PROPERTY;
     }
     // event
     xcb_intern_atom_cookie_t cookie_protocols =
@@ -77,13 +109,13 @@ int skd_create_window(unsigned short width, unsigned short height) {
         XCB_PROP_MODE_REPLACE,
         window,
         atom_protocols->atom,
-        4,
+        XCB_ATOM_ATOM,
         32,
         1,
         &g_atom_delete_window->atom
     );
     if (xcb_request_check(g_connection, res) != NULL) {
-        return 5;
+        return WINDOW_ERROR_MESSAGE_CHANGE_PROPERTY;
     }
     free(atom_protocols);
     // finish
@@ -110,7 +142,6 @@ int skd_do_window_events() {
         }
         free(event);
     }
-    return 1;
 }
 
 void skd_terminate_window() {
