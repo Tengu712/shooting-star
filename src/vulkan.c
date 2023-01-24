@@ -16,6 +16,7 @@
 #define EMSG_GET_SURFACE_FORMATS 8
 #define EMSG_GET_SURFACE_CAPABILITIES 9
 #define EMSG_CREATE_RENDER_PASS 10
+#define EMSG_CREATE_SWAPCHAIN 11
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
@@ -24,6 +25,7 @@ VkSurfaceKHR g_surface;
 uint32_t g_width;
 uint32_t g_height;
 VkRenderPass g_render_pass;
+VkSwapchainKHR g_swapchain;
 
 int create_xcb_surface(SkdWindowUnion *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -289,19 +291,47 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
     );
     CHECK(EMSG_CREATE_RENDER_PASS);
 
+    // swapchain
+    const uint32_t min_image_count =
+        surface_capabilities.minImageCount > 2 ?
+            surface_capabilities.minImageCount : 2;
+    const VkSwapchainCreateInfoKHR swapchain_create_info = {
+        VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        NULL,
+        0,
+        g_surface,
+        min_image_count,
+        surface_format.format,
+        surface_format.colorSpace,
+        surface_capabilities.currentExtent,
+        1,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0,
+        NULL,
+        surface_capabilities.currentTransform,
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_TRUE,
+        VK_NULL_HANDLE
+    };
+    res = vkCreateSwapchainKHR(
+        g_device,
+        &swapchain_create_info,
+        NULL,
+        &g_swapchain
+    );
+    CHECK(EMSG_CREATE_SWAPCHAIN);
+
     // finish
     return 0;
 }
 
 void skd_terminate_vulkan(void) {
-    if (g_device != NULL)
-        vkDeviceWaitIdle(g_device);
-    if (g_render_pass != NULL)
-        vkDestroyRenderPass(g_device, g_render_pass, NULL);
-    if (g_surface != NULL)
-        vkDestroySurfaceKHR(g_instance, g_surface, NULL);
-    if (g_device != NULL)
-        vkDestroyDevice(g_device, NULL);
-    if (g_instance != NULL)
-        vkDestroyInstance(g_instance, NULL);
+   vkDeviceWaitIdle(g_device);
+   vkDestroySwapchainKHR(g_device, g_swapchain, NULL);
+   vkDestroyRenderPass(g_device, g_render_pass, NULL);
+   vkDestroySurfaceKHR(g_instance, g_surface, NULL);
+   vkDestroyDevice(g_device, NULL);
+   vkDestroyInstance(g_instance, NULL);
 }
