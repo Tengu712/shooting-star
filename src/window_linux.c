@@ -4,6 +4,12 @@
 
 #include "window.h"
 
+#define WIN_EMSG_CONNECT_X 1
+#define WIN_EMSG_GET_SETUP 2
+#define WIN_EMSG_GET_SCREEN 3
+#define WIN_EMSG_CREATE_WINDOW 4
+#define WIN_EMSG_CHANGE_PROPERTY 5
+
 typedef struct {
     uint32_t flags;
     int32_t x, y;
@@ -20,22 +26,39 @@ typedef struct {
 xcb_connection_t *g_connection;
 xcb_intern_atom_reply_t *g_atom_delete_window;
 
+const char *skd_get_window_error_message(int res) {
+    switch (res) {
+        case WIN_EMSG_CONNECT_X:
+            return "failed to connect with X server";
+        case WIN_EMSG_GET_SETUP:
+            return "failed to get a setup";
+        case WIN_EMSG_GET_SCREEN:
+            return "failed to get a screen";
+        case WIN_EMSG_CREATE_WINDOW:
+            return "failed to create a window";
+        case WIN_EMSG_CHANGE_PROPERTY:
+            return "failed to change window property";
+        default:
+            return "unexpected";
+    }
+}
+
 int skd_create_window(const char *title, unsigned short width, unsigned short height) {
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
     if (xcb_connection_has_error(g_connection)) {
-        return WINDOW_ERROR_MESSAGE_CONNECT_X;
+        return WIN_EMSG_CONNECT_X;
     }
     // screen
     const xcb_setup_t *setup = xcb_get_setup(g_connection);
     if (setup == NULL) {
-        return WINDOW_ERROR_MESSAGE_GET_SETUP;
+        return WIN_EMSG_GET_SETUP;
     }
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
     xcb_screen_t *screen = iter.data;
     if (screen == NULL) {
-        return WINDOW_ERROR_MESSAGE_GET_SCREEN;
+        return WIN_EMSG_GET_SCREEN;
     }
     // window
     const uint32_t value_list[1] = {
@@ -58,7 +81,7 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         value_list
     );
     if (xcb_request_check(g_connection, res) != NULL) {
-        return WINDOW_ERROR_MESSAGE_CREATE_WINDOW;
+        return WIN_EMSG_CREATE_WINDOW;
     }
     // title
     res = xcb_change_property(
@@ -72,7 +95,7 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         title
     );
     if (xcb_request_check(g_connection, res) != NULL) {
-        return WINDOW_ERROR_MESSAGE_CHANGE_PROPERTY;
+        return WIN_EMSG_CHANGE_PROPERTY;
     }
     // disable resize
     XSizeHints size_hints;
@@ -93,7 +116,7 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         &size_hints
     );
     if (xcb_request_check(g_connection, res) != NULL) {
-        return WINDOW_ERROR_MESSAGE_CHANGE_PROPERTY;
+        return WIN_EMSG_CHANGE_PROPERTY;
     }
     // event
     xcb_intern_atom_cookie_t cookie_protocols =
@@ -115,7 +138,7 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         &g_atom_delete_window->atom
     );
     if (xcb_request_check(g_connection, res) != NULL) {
-        return WINDOW_ERROR_MESSAGE_CHANGE_PROPERTY;
+        return WIN_EMSG_CHANGE_PROPERTY;
     }
     free(atom_protocols);
     // finish
