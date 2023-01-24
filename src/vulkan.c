@@ -20,6 +20,10 @@
 #define EMSG_GET_IMAGES 12
 #define EMSG_CREATE_IMAGE_VIEW 13
 #define EMSG_CREATE_FRAMEBUFFER 14
+#define EMSG_CREATE_COMMAND_POOL 15
+#define EMSG_ALLOCATE_COMMAND_BUFFERS 16
+#define EMSG_CREATE_FENCE 17
+#define EMSG_CREATE_SEMAPHORE 18
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
@@ -32,6 +36,14 @@ VkSwapchainKHR g_swapchain;
 uint32_t g_images_cnt;
 VkImageView *g_image_views;
 VkFramebuffer *g_framebuffers;
+VkQueue g_queue;
+VkCommandPool g_command_pool;
+uint32_t g_command_buffers_cnt;
+VkCommandBuffer *g_command_buffers;
+uint32_t g_fences_cnt;
+VkFence *g_fences;
+uint32_t g_semaphores_cnt;
+VkSemaphore *g_semaphores;
 
 int create_xcb_surface(SkdWindowUnion *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -393,12 +405,95 @@ int skd_init_vulkan(int window_kind, SkdWindowUnion *window_param) {
         CHECK(EMSG_CREATE_FRAMEBUFFER);
     }
 
+    // queue
+    vkGetDeviceQueue(g_device, queue_family_index, 0, &g_queue);
+
+    // command pool
+    const VkCommandPoolCreateInfo command_pool_create_info = {
+        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        NULL,
+        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        queue_family_index,
+    };
+    res = vkCreateCommandPool(
+        g_device,
+        &command_pool_create_info,
+        NULL,
+        &g_command_pool
+    );
+    CHECK(EMSG_CREATE_COMMAND_POOL);
+
+    // command buffers
+    g_command_buffers_cnt = 1;
+    const VkCommandBufferAllocateInfo command_buffer_allocate_info = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        NULL,
+        g_command_pool,
+        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        g_command_buffers_cnt,
+    };
+    g_command_buffers =
+        (VkCommandBuffer *)
+        malloc(sizeof(VkCommandBuffer) * g_command_buffers_cnt);
+    res = vkAllocateCommandBuffers(
+        g_device,
+        &command_buffer_allocate_info,
+        g_command_buffers
+    );
+    CHECK(EMSG_ALLOCATE_COMMAND_BUFFERS);
+
+    // fences
+    g_fences_cnt = 1;
+    const VkFenceCreateInfo fence_create_info = {
+        VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        NULL,
+        VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+    g_fences = (VkFence *)malloc(sizeof(VkFence) * g_fences_cnt);
+    for (int i = 0; i < g_fences_cnt; ++i) {
+        res = vkCreateFence(g_device, &fence_create_info, NULL, &g_fences[i]);
+        CHECK(EMSG_CREATE_FENCE);
+    }
+
+    // semaphores
+    g_semaphores_cnt = 2;
+    const VkSemaphoreCreateInfo semaphore_create_info = {
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        NULL,
+        0,
+    };
+    g_semaphores = (VkSemaphore*)malloc(sizeof(VkSemaphore) * g_semaphores_cnt);
+    for (int i = 0; i < g_semaphores_cnt; ++i) {
+        res = vkCreateSemaphore(
+            g_device,
+            &semaphore_create_info,
+            NULL,
+            &g_semaphores[i]
+        );
+        CHECK(EMSG_CREATE_SEMAPHORE);
+    }
+
     // finish
     return 0;
 }
 
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
+    for (int i = 0; i < g_semaphores_cnt; ++i) {
+        vkDestroySemaphore(g_device, g_semaphores[i], NULL);
+    }
+    for (int i = 0; i < g_fences_cnt; ++i) {
+        vkDestroyFence(g_device, g_fences[i], NULL);
+    }
+    free(g_semaphores);
+    free(g_fences);
+    vkFreeCommandBuffers(
+        g_device,
+        g_command_pool,
+        g_command_buffers_cnt,
+        g_command_buffers
+    );
+    vkDestroyCommandPool(g_device, g_command_pool, NULL);
     for (int i = 0; i < g_images_cnt; ++i) {
         vkDestroyFramebuffer(g_device, g_framebuffers[i], NULL);
     }
