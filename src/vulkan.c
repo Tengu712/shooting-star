@@ -29,6 +29,8 @@
 #define EMSG_CREATE_BUFFER 21
 #define EMSG_CREATE_DESCRIPTOR 22
 #define EMSG_CREATE_PIPELINE 23
+#define EMSG_CREATE_SQUARE 24
+#define EMSG_MAP_UBO 25
 
 typedef struct Vec4_t {
     float x;
@@ -74,6 +76,14 @@ typedef struct Vertex_t {
     float pos_z;
 } Vertex;
 
+typedef struct Model_t {
+    uint32_t index_cnt;
+    VkBuffer vertex_buffer;
+    VkBuffer index_buffer;
+    VkDeviceMemory vertex_buffer_memory;
+    VkDeviceMemory index_buffer_memory;
+} Model;
+
 extern char shader_vert_data[];
 extern int shader_vert_size;
 extern char shader_frag_data[];
@@ -105,6 +115,9 @@ VkDescriptorPool g_descriptor_pool;
 VkDescriptorSet g_descriptor_set;
 VkPipelineLayout g_pipeline_layout;
 VkPipeline g_pipeline;
+Model g_square;
+int g_is_ubo_updated;
+UniformBufferObject g_ubo;
 
 int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -882,12 +895,84 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
     );
     CHECK(EMSG_CREATE_PIPELINE);
 
+    // g_square model
+    Vertex vtxs[4] = {
+        { -0.5f, -0.5f, 0.0f },
+        { -0.5f,  0.5f, 0.0f },
+        {  0.5f,  0.5f, 0.0f },
+        {  0.5f, -0.5f, 0.0f },
+    };
+    uint32_t idxs[6] = { 0, 1, 2, 0, 2, 3 };
+    g_square.index_cnt = 6;
+    if (!create_buffer(
+            sizeof(Vertex) * 4,
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            &g_square.vertex_buffer,
+            &g_square.vertex_buffer_memory))
+    {
+        return EMSG_CREATE_SQUARE;
+    }
+    if (!create_buffer(
+            sizeof(uint32_t) * 6,
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            &g_square.index_buffer,
+            &g_square.index_buffer_memory))
+    {
+        return EMSG_CREATE_SQUARE;
+    }
+    if (!map_memory(
+            g_square.vertex_buffer_memory,
+            (void *)vtxs,
+            sizeof(Vertex) * 4))
+    {
+        return EMSG_CREATE_SQUARE;
+    }
+    if (!map_memory(
+            g_square.index_buffer_memory,
+            (void *)idxs,
+            sizeof(uint32_t) * 6))
+    {
+        return EMSG_CREATE_SQUARE;
+    }
+
+    // ubo
+    Mat4 mat_e = {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f,
+    };
+    Vec4 vec_e = { 0.0f, 0.0f, 0.0f, 0.0f };
+    g_ubo.mat_scl = mat_e;
+    g_ubo.mat_rtx = mat_e;
+    g_ubo.mat_rty = mat_e;
+    g_ubo.mat_rtz = mat_e;
+    g_ubo.mat_trs = mat_e;
+    g_ubo.mat_view = mat_e;
+    g_ubo.mat_proj = mat_e;
+    g_ubo.vec_uv = vec_e;
+    g_ubo.vec_param = vec_e;
+    if (!map_memory(
+            g_uniform_buffer_memory,
+            (void *)&g_ubo,
+            sizeof(UniformBufferObject)))
+    {
+        return EMSG_MAP_UBO;
+    }
+    g_is_ubo_updated = 0;
+
     // finish
     return 0;
 }
 
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
+    vkFreeMemory(g_device, g_square.vertex_buffer_memory, NULL);
+    vkFreeMemory(g_device, g_square.index_buffer_memory, NULL);
+    vkDestroyBuffer(g_device, g_square.vertex_buffer, NULL);
+    vkDestroyBuffer(g_device, g_square.index_buffer, NULL);
     vkDestroyPipeline(g_device, g_pipeline, NULL);
     vkDestroyPipelineLayout(g_device, g_pipeline_layout, NULL);
     vkDestroyDescriptorPool(g_device, g_descriptor_pool, NULL);
@@ -973,6 +1058,28 @@ int skd_begin_render(unsigned int *p_id, float r, float g, float b) {
         &render_pass_begin_info,
         VK_SUBPASS_CONTENTS_INLINE
     );
+    // bind pipeline
+    vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, g_pipeline);
+    // bind descriptor set
+    vkCmdBindDescriptorSets(
+        command,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        g_pipeline_layout,
+        0,
+        1,
+        &g_descriptor_set,
+        0,
+        NULL
+    );
+    // bind square
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(command, 0, 1, &g_square.vertex_buffer, &offset);
+    vkCmdBindIndexBuffer(
+        command,
+        g_square.index_buffer,
+        offset,
+        VK_INDEX_TYPE_UINT32
+    );
     // finish
     *p_id = next_image_idx;
     return 1;
@@ -1018,5 +1125,21 @@ int skd_end_render(unsigned int id) {
     res = vkQueuePresentKHR(g_queue, &present_info);
     CHECK(0);
     // finish
+    return 1;
+}
+
+int skd_draw(int id) {
+    if (g_is_ubo_updated) {
+        if (!map_memory(
+                g_uniform_buffer_memory,
+                (void *)&g_ubo,
+                sizeof(UniformBufferObject)))
+        {
+            return 0;
+        }
+        g_is_ubo_updated = 0;
+    }
+    const VkCommandBuffer command = g_command_buffers[id];
+    vkCmdDrawIndexed(command, g_square.index_cnt, 1, 0, 0, 0);
     return 1;
 }

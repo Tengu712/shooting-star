@@ -17,3 +17,7 @@ int skd_begin_render(unsigned int *p_id, float r, float g, float b);
 // A function to end to render.
 // It returns 0 if it succeeded.
 int skd_end_render(unsigned int id);
+
+// A function to draw square.
+// It returns 0 if it succeeded.
+int skd_draw(int id);
