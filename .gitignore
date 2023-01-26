@@ -1,4 +1,6 @@
+/bin2c/bin2c
 /tmp/
+fireball
 *.a
 *.o
 *.out

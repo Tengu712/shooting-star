@@ -24,6 +24,13 @@
 #define EMSG_ALLOCATE_COMMAND_BUFFERS 16
 #define EMSG_CREATE_FENCE 17
 #define EMSG_CREATE_SEMAPHORE 18
+#define EMSG_CREATE_PIPELINE_LAYOUT 19
+#define EMSG_CREATE_SHADER 20
+
+extern char shader_vert_data[];
+extern int shader_vert_size;
+extern char shader_frag_data[];
+extern int shader_frag_size;
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
@@ -42,6 +49,9 @@ VkCommandBuffer *g_command_buffers;
 VkFence *g_fences;
 VkSemaphore g_render_semaphore;
 VkSemaphore g_present_semaphore;
+VkShaderModule g_vert_shader;
+VkShaderModule g_frag_shader;
+VkPipelineLayout g_pipeline_layout;
 
 int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -471,12 +481,59 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
     );
     CHECK(EMSG_CREATE_SEMAPHORE);
 
+    // shaders
+    VkShaderModuleCreateInfo shader_module_create_info = {
+        VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        NULL,
+        0,
+        shader_vert_size,
+        (const uint32_t *)shader_vert_data,
+    };
+    res = vkCreateShaderModule(
+        g_device,
+        &shader_module_create_info,
+        NULL,
+        &g_vert_shader
+    );
+    CHECK(EMSG_CREATE_SHADER);
+    shader_module_create_info.codeSize = shader_frag_size;
+    shader_module_create_info.pCode = (const uint32_t *)shader_frag_data;
+    res = vkCreateShaderModule(
+        g_device,
+        &shader_module_create_info,
+        NULL,
+        &g_frag_shader
+    );
+    CHECK(EMSG_CREATE_SHADER);
+
+    // pipeline layout
+/*
+    VkPipelineLayoutCreateInfo layout_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        NULL,
+        0,
+        1,
+        &descriptor_set_layout,
+        0,
+        NULL,
+    };
+    res = vkCreatePipelineLayout(
+        g_device,
+        &layout_create_info,
+        NULL,
+        &g_pipeline_layout
+    );
+    CHECK(EMSG_CREATE_PIPELINE_LAYOUT);
+*/
+
     // finish
     return 0;
 }
 
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
+    vkDestroyShaderModule(g_device, g_vert_shader, NULL);
+    vkDestroyShaderModule(g_device, g_frag_shader, NULL);
     vkDestroySemaphore(g_device, g_present_semaphore, NULL);
     vkDestroySemaphore(g_device, g_render_semaphore, NULL);
     for (int i = 0; i < g_images_cnt; ++i) {
