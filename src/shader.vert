@@ -9,7 +9,7 @@ layout(binding = 0) uniform UniformBufferObject {
     mat4 view;
     mat4 proj;
     vec4 uv;
-    vec4 opt;
+    vec4 param;
 } ubo;
 
 layout(location=0) in vec3 in_pos;

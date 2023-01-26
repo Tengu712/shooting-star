@@ -26,6 +26,45 @@
 #define EMSG_CREATE_SEMAPHORE 18
 #define EMSG_CREATE_PIPELINE_LAYOUT 19
 #define EMSG_CREATE_SHADER 20
+#define EMSG_CREATE_BUFFER 21
+
+typedef struct Vec4_t {
+    float x;
+    float y;
+    float z;
+    float w;
+} Vec4;
+
+typedef struct Mat4_t {
+    float a11;
+    float a21;
+    float a31;
+    float a41;
+    float a12;
+    float a22;
+    float a32;
+    float a42;
+    float a13;
+    float a23;
+    float a33;
+    float a43;
+    float a14;
+    float a24;
+    float a34;
+    float a44;
+} Mat4;
+
+typedef struct UniformBufferObject_t {
+    Mat4 mat_scl;
+    Mat4 mat_rtx;
+    Mat4 mat_rty;
+    Mat4 mat_rtz;
+    Mat4 mat_trs;
+    Mat4 mat_view;
+    Mat4 mat_proj;
+    Vec4 vec_uv;
+    Vec4 vec_param;
+} UniformBufferObject;
 
 extern char shader_vert_data[];
 extern int shader_vert_size;
@@ -52,6 +91,8 @@ VkSemaphore g_present_semaphore;
 VkShaderModule g_vert_shader;
 VkShaderModule g_frag_shader;
 VkPipelineLayout g_pipeline_layout;
+VkBuffer g_uniform_buffer;
+VkDeviceMemory g_uniform_buffer_memory;
 
 int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -63,6 +104,75 @@ int create_xcb_surface(SkdWindowParam *window_param) {
     };
     VkResult res = vkCreateXcbSurfaceKHR(g_instance, &ci, NULL, &g_surface);
     CHECK(0);
+    return 1;
+}
+
+int create_buffer(
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags memory_prop_flags,
+    VkBuffer *p_buffer,
+    VkDeviceMemory *p_device_memory
+) {
+    VkResult res;
+    VkBufferCreateInfo buffer_create_info = {
+        VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        NULL,
+        0,
+        size,
+        usage,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0,
+    };
+    res = vkCreateBuffer(g_device, &buffer_create_info, NULL, p_buffer);
+    CHECK(0);
+    VkMemoryRequirements memory_requirements;
+    vkGetBufferMemoryRequirements(g_device, *p_buffer, &memory_requirements);
+    VkMemoryAllocateInfo memory_allocate_info = {
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        NULL,
+        memory_requirements.size,
+        0,
+    };
+    int memory_type_index = -1;
+    for (int i = 0; i < g_phys_device_memory_prop.memoryTypeCount; ++i) {
+        if ((memory_requirements.memoryTypeBits & (1 << i))
+            && (g_phys_device_memory_prop.memoryTypes[i].propertyFlags
+                & memory_prop_flags))
+        {
+            memory_type_index = i;
+            break;
+        }
+    }
+    if (memory_type_index == -1) {
+        return 0;
+    }
+    memory_allocate_info.memoryTypeIndex = memory_type_index;
+    res = vkAllocateMemory(
+        g_device,
+        &memory_allocate_info,
+        NULL,
+        p_device_memory
+    );
+    CHECK(0);
+    res = vkBindBufferMemory(g_device, *p_buffer, *p_device_memory, 0);
+    CHECK(0);
+    return 1;
+}
+
+int map_memory(VkDeviceMemory device_memory, void *data, int size) {
+    void *p;
+    VkResult res = vkMapMemory(
+        g_device,
+        device_memory,
+        0,
+        VK_WHOLE_SIZE,
+        0,
+        &p
+    );
+    CHECK(0);
+    memcpy(p, data, size);
+    vkUnmapMemory(g_device, device_memory);
     return 1;
 }
 
@@ -506,6 +616,18 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
     );
     CHECK(EMSG_CREATE_SHADER);
 
+    // uniform buffer
+    if (!create_buffer(
+            sizeof(UniformBufferObject),
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            &g_uniform_buffer,
+            &g_uniform_buffer_memory))
+    {
+        return EMSG_CREATE_BUFFER;
+    }
+
+
     // pipeline layout
 /*
     VkPipelineLayoutCreateInfo layout_create_info = {
@@ -532,6 +654,8 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
 
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
+    vkFreeMemory(g_device, g_uniform_buffer_memory, NULL);
+    vkDestroyBuffer(g_device, g_uniform_buffer, NULL);
     vkDestroyShaderModule(g_device, g_vert_shader, NULL);
     vkDestroyShaderModule(g_device, g_frag_shader, NULL);
     vkDestroySemaphore(g_device, g_present_semaphore, NULL);
