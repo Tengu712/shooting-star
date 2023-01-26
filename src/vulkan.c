@@ -27,6 +27,7 @@
 #define EMSG_CREATE_PIPELINE_LAYOUT 19
 #define EMSG_CREATE_SHADER 20
 #define EMSG_CREATE_BUFFER 21
+#define EMSG_CREATE_DESCRIPTOR 22
 
 typedef struct Vec4_t {
     float x;
@@ -93,6 +94,9 @@ VkShaderModule g_frag_shader;
 VkPipelineLayout g_pipeline_layout;
 VkBuffer g_uniform_buffer;
 VkDeviceMemory g_uniform_buffer_memory;
+VkDescriptorSetLayout g_descriptor_set_layout;
+VkDescriptorPool g_descriptor_pool;
+VkDescriptorSet g_descriptor_set;
 
 int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -627,6 +631,84 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
         return EMSG_CREATE_BUFFER;
     }
 
+    // descriptor
+    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = {
+        0,
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        1,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        NULL,
+    };
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        NULL,
+        0,
+        1,
+        &descriptor_set_layout_binding,
+    };
+    res = vkCreateDescriptorSetLayout(
+        g_device,
+        &descriptor_set_layout_create_info,
+        NULL,
+        &g_descriptor_set_layout
+    );
+    CHECK(EMSG_CREATE_DESCRIPTOR);
+    VkDescriptorPoolSize descriptor_pool_size = {
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        1,
+    };
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        NULL,
+        0,
+        1,
+        1,
+        &descriptor_pool_size,
+    };
+    res = vkCreateDescriptorPool(
+        g_device,
+        &descriptor_pool_create_info,
+        NULL,
+        &g_descriptor_pool
+    );
+    CHECK(EMSG_CREATE_DESCRIPTOR);
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        NULL,
+        g_descriptor_pool,
+        1,
+        &g_descriptor_set_layout,
+    };
+    res = vkAllocateDescriptorSets(
+        g_device,
+        &descriptor_set_allocate_info,
+        &g_descriptor_set
+    );
+    CHECK(EMSG_CREATE_DESCRIPTOR);
+    VkDescriptorBufferInfo uniform_buffer_descriptor_buffer_info = {
+        g_uniform_buffer,
+        0,
+        VK_WHOLE_SIZE,
+    };
+    VkWriteDescriptorSet uniform_buffer_write_descriptor_set = {
+        VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        NULL,
+        g_descriptor_set,
+        0,
+        0,
+        1,
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        NULL,
+        &uniform_buffer_descriptor_buffer_info,
+        NULL,
+    };
+    vkUpdateDescriptorSets(
+        g_device,
+        1,
+        &uniform_buffer_write_descriptor_set,
+        0,
+        NULL
+    );
 
     // pipeline layout
 /*
@@ -654,6 +736,8 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
 
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
+    vkDestroyDescriptorPool(g_device, g_descriptor_pool, NULL);
+    vkDestroyDescriptorSetLayout(g_device, g_descriptor_set_layout, NULL);
     vkFreeMemory(g_device, g_uniform_buffer_memory, NULL);
     vkDestroyBuffer(g_device, g_uniform_buffer, NULL);
     vkDestroyShaderModule(g_device, g_vert_shader, NULL);
