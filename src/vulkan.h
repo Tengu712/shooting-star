@@ -21,3 +21,9 @@ int skd_end_render(unsigned int id);
 // A function to draw square.
 // It returns 0 if it succeeded.
 int skd_draw(int id);
+
+// Functions to update ubo.
+void skd_scale(float x, float y, float z);
+void skd_trans(float x, float y, float z);
+void skd_uv(float u, float v, float u_end, float v_end);
+void skd_param(float x, float y, float z, float w);

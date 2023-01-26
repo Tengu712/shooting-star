@@ -1143,3 +1143,33 @@ int skd_draw(int id) {
     vkCmdDrawIndexed(command, g_square.index_cnt, 1, 0, 0, 0);
     return 1;
 }
+
+void skd_scale(float x, float y, float z) {
+    g_ubo.mat_scl.a11 = x;
+    g_ubo.mat_scl.a22 = y;
+    g_ubo.mat_scl.a33 = z;
+    g_is_ubo_updated = 1;
+}
+
+void skd_trans(float x, float y, float z) {
+    g_ubo.mat_trs.a14 = x;
+    g_ubo.mat_trs.a24 = y;
+    g_ubo.mat_trs.a34 = z;
+    g_is_ubo_updated = 1;
+}
+
+void skd_uv(float u, float v, float u_end, float v_end) {
+    g_ubo.vec_uv.x = u;
+    g_ubo.vec_uv.y = v;
+    g_ubo.vec_uv.z = u_end;
+    g_ubo.vec_uv.w = v_end;
+    g_is_ubo_updated = 1;
+}
+
+void skd_param(float x, float y, float z, float w) {
+    g_ubo.vec_param.x = x;
+    g_ubo.vec_param.y = y;
+    g_ubo.vec_param.z = z;
+    g_ubo.vec_param.w = w;
+    g_is_ubo_updated = 1;
+}

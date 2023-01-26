@@ -22,6 +22,8 @@ int main() {
         if (skd_do_window_events() == 1) break;
         unsigned int id;
         if (!skd_begin_render(&id, 1.0f, 0.0f, 0.0f)) break;
+        skd_scale(0.5f, 0.5f, 1.0f);
+        skd_trans(0.5f, 0.0f, 0.0f);
         if (!skd_draw(id)) break;
         if (!skd_end_render(id)) break;
     }
