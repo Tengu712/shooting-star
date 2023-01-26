@@ -28,6 +28,7 @@
 #define EMSG_CREATE_SHADER 20
 #define EMSG_CREATE_BUFFER 21
 #define EMSG_CREATE_DESCRIPTOR 22
+#define EMSG_CREATE_PIPELINE 23
 
 typedef struct Vec4_t {
     float x;
@@ -67,6 +68,12 @@ typedef struct UniformBufferObject_t {
     Vec4 vec_param;
 } UniformBufferObject;
 
+typedef struct Vertex_t {
+    float pos_x;
+    float pos_y;
+    float pos_z;
+} Vertex;
+
 extern char shader_vert_data[];
 extern int shader_vert_size;
 extern char shader_frag_data[];
@@ -91,12 +98,13 @@ VkSemaphore g_render_semaphore;
 VkSemaphore g_present_semaphore;
 VkShaderModule g_vert_shader;
 VkShaderModule g_frag_shader;
-VkPipelineLayout g_pipeline_layout;
 VkBuffer g_uniform_buffer;
 VkDeviceMemory g_uniform_buffer_memory;
 VkDescriptorSetLayout g_descriptor_set_layout;
 VkDescriptorPool g_descriptor_pool;
 VkDescriptorSet g_descriptor_set;
+VkPipelineLayout g_pipeline_layout;
+VkPipeline g_pipeline;
 
 int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
@@ -710,25 +718,169 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
         NULL
     );
 
-    // pipeline layout
-/*
-    VkPipelineLayoutCreateInfo layout_create_info = {
+    // pipeline
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         NULL,
         0,
         1,
-        &descriptor_set_layout,
+        &g_descriptor_set_layout,
         0,
         NULL,
     };
     res = vkCreatePipelineLayout(
         g_device,
-        &layout_create_info,
+        &pipeline_layout_create_info,
         NULL,
         &g_pipeline_layout
     );
     CHECK(EMSG_CREATE_PIPELINE_LAYOUT);
-*/
+    VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
+        {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            NULL,
+            0,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            g_vert_shader,
+            "main",
+            NULL,
+        },
+        {
+            VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            NULL,
+            0,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            g_frag_shader,
+            "main",
+            NULL,
+        },
+    };
+    VkVertexInputBindingDescription vertex_input_binding_desc = {
+        0,
+        sizeof(Vertex),
+        VK_VERTEX_INPUT_RATE_VERTEX,
+    };
+    VkVertexInputAttributeDescription vertex_input_attribute_desc[] = {
+        { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
+    };
+    VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        NULL,
+        0,
+        1,
+        &vertex_input_binding_desc,
+        1,
+        vertex_input_attribute_desc,
+    };
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        NULL,
+        0,
+        VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        VK_FALSE,
+    };
+    VkViewport viewport = {
+        0.0f,
+        0.0f,
+        (float)g_width,
+        (float)g_height,
+        0.0f,
+        1.0f,
+    };
+    VkRect2D scissor = {
+        {0, 0},
+        {g_width, g_height},
+    };
+    VkPipelineViewportStateCreateInfo viewport_state_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        NULL,
+        0,
+        1,
+        &viewport,
+        1,
+        &scissor,
+    };
+    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        NULL,
+        0,
+        VK_FALSE,
+        VK_FALSE,
+        VK_POLYGON_MODE_FILL,
+        VK_CULL_MODE_NONE,
+        VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        VK_FALSE,
+        0.0f,
+        0.0f,
+        0.0f,
+        1.0f,
+    };
+    VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        NULL,
+        0,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_FALSE,
+        0.0f,
+        NULL,
+        VK_FALSE,
+        VK_FALSE,
+    };
+    const VkColorComponentFlags color_component_flag =
+        VK_COLOR_COMPONENT_R_BIT 
+        | VK_COLOR_COMPONENT_G_BIT
+        | VK_COLOR_COMPONENT_B_BIT
+        | VK_COLOR_COMPONENT_A_BIT;
+    VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
+        VK_TRUE,
+        VK_BLEND_FACTOR_ONE,
+        VK_BLEND_FACTOR_ZERO,
+        VK_BLEND_OP_ADD,
+        VK_BLEND_FACTOR_ONE,
+        VK_BLEND_FACTOR_ZERO,
+        VK_BLEND_OP_ADD,
+        color_component_flag,
+    };
+    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {
+        VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        NULL,
+        0,
+        VK_FALSE,
+        (VkLogicOp)0,
+        1,
+        &color_blend_attachment_state,
+        {0.0f, 0.0f, 0.0f, 0.0f},
+    };
+    VkGraphicsPipelineCreateInfo pipeline_create_info = {
+        VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        NULL,
+        0,
+        2,
+        shader_stage_create_info,
+        &vertex_input_state_create_info,
+        &input_assembly_state_create_info,
+        NULL,
+        &viewport_state_create_info,
+        &rasterization_state_create_info,
+        &multisample_state_create_info,
+        NULL,
+        &color_blend_state_create_info,
+        NULL,
+        g_pipeline_layout,
+        g_render_pass,
+        0,
+        NULL,
+        0,
+    };
+    res = vkCreateGraphicsPipelines(
+        g_device,
+        VK_NULL_HANDLE,
+        1,
+        &pipeline_create_info,
+        NULL,
+        &g_pipeline
+    );
+    CHECK(EMSG_CREATE_PIPELINE);
 
     // finish
     return 0;
@@ -736,6 +888,8 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
 
 void skd_terminate_vulkan(void) {
     vkDeviceWaitIdle(g_device);
+    vkDestroyPipeline(g_device, g_pipeline, NULL);
+    vkDestroyPipelineLayout(g_device, g_pipeline_layout, NULL);
     vkDestroyDescriptorPool(g_device, g_descriptor_pool, NULL);
     vkDestroyDescriptorSetLayout(g_device, g_descriptor_set_layout, NULL);
     vkFreeMemory(g_device, g_uniform_buffer_memory, NULL);
