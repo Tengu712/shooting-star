@@ -9,6 +9,7 @@ build_linux:	tmp/window_linux.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
 	  tmp/shader.frag.o \
 	  test.c \
 	  -L. \
+	  -lm \
 	  -lxcb \
 	  -lvulkan
 tmp/window_linux.o:	src/window_linux.c

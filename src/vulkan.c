@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include "vulkan.h"
 
 #define CHECK(p) if (res != VK_SUCCESS) return (p);
@@ -31,6 +33,10 @@
 #define EMSG_CREATE_PIPELINE 23
 #define EMSG_CREATE_SQUARE 24
 #define EMSG_MAP_UBO 25
+
+// ========================================================================= //
+//         Structs                                                           //
+// ========================================================================= //
 
 typedef struct Vec4_t {
     float x;
@@ -84,10 +90,19 @@ typedef struct Model_t {
     VkDeviceMemory index_buffer_memory;
 } Model;
 
+typedef struct Image_t {
+    VkImage image;
+    VkDeviceMemory memory;
+} Image;
+
 extern char shader_vert_data[];
 extern int shader_vert_size;
 extern char shader_frag_data[];
 extern int shader_frag_size;
+
+// ========================================================================= //
+//         Global Variables                                                  //
+// ========================================================================= //
 
 VkInstance g_instance;
 VkPhysicalDeviceMemoryProperties g_phys_device_memory_prop;
@@ -119,6 +134,10 @@ Model g_square;
 int g_is_ubo_updated;
 UniformBufferObject g_ubo;
 
+// ========================================================================= //
+//         General Functions                                                 //
+// ========================================================================= //
+
 int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
         VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
@@ -132,10 +151,25 @@ int create_xcb_surface(SkdWindowParam *window_param) {
     return 1;
 }
 
+int get_memory_type_index(
+    VkMemoryRequirements reqs,
+    VkMemoryPropertyFlags flags
+) {
+    for (int i = 0; i < g_phys_device_memory_prop.memoryTypeCount; ++i) {
+        if ((reqs.memoryTypeBits & (1 << i))
+            && (g_phys_device_memory_prop.memoryTypes[i].propertyFlags
+                & flags))
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 int create_buffer(
     VkDeviceSize size,
     VkBufferUsageFlags usage,
-    VkMemoryPropertyFlags memory_prop_flags,
+    VkMemoryPropertyFlags flags,
     VkBuffer *p_buffer,
     VkDeviceMemory *p_device_memory
 ) {
@@ -151,31 +185,18 @@ int create_buffer(
     };
     res = vkCreateBuffer(g_device, &buffer_create_info, NULL, p_buffer);
     CHECK(0);
-    VkMemoryRequirements memory_requirements;
-    vkGetBufferMemoryRequirements(g_device, *p_buffer, &memory_requirements);
-    VkMemoryAllocateInfo memory_allocate_info = {
+    VkMemoryRequirements reqs;
+    vkGetBufferMemoryRequirements(g_device, *p_buffer, &reqs);
+    VkMemoryAllocateInfo allocate_info = {
         VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         NULL,
-        memory_requirements.size,
+        reqs.size,
         0,
     };
-    int memory_type_index = -1;
-    for (int i = 0; i < g_phys_device_memory_prop.memoryTypeCount; ++i) {
-        if ((memory_requirements.memoryTypeBits & (1 << i))
-            && (g_phys_device_memory_prop.memoryTypes[i].propertyFlags
-                & memory_prop_flags))
-        {
-            memory_type_index = i;
-            break;
-        }
-    }
-    if (memory_type_index == -1) {
-        return 0;
-    }
-    memory_allocate_info.memoryTypeIndex = memory_type_index;
+    allocate_info.memoryTypeIndex = get_memory_type_index(reqs, flags);
     res = vkAllocateMemory(
         g_device,
-        &memory_allocate_info,
+        &allocate_info,
         NULL,
         p_device_memory
     );
@@ -200,6 +221,10 @@ int map_memory(VkDeviceMemory device_memory, void *data, int size) {
     vkUnmapMemory(g_device, device_memory);
     return 1;
 }
+
+// ========================================================================= //
+//         Initialization and Termination                                    //
+// ========================================================================= //
 
 int skd_init_vulkan(SkdWindowParam *window_param) {
     VkResult res;
@@ -1009,6 +1034,10 @@ void skd_terminate_vulkan(void) {
     vkDestroyInstance(g_instance, NULL);
 }
 
+// ========================================================================= //
+//         Rendering API                                                     //
+// ========================================================================= //
+
 int skd_begin_render(unsigned int *p_id, float r, float g, float b) {
     VkResult res;
     // get next image index
@@ -1143,6 +1172,86 @@ int skd_draw(int id) {
     vkCmdDrawIndexed(command, g_square.index_cnt, 1, 0, 0, 0);
     return 1;
 }
+
+// ========================================================================= //
+//         Image API                                                         //
+// ========================================================================= //
+
+void *skd_load_image_from_file(const char *path) {
+    VkResult res;
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    unsigned char *pixels = stbi_load(path, &width, &height, &channels, 0);
+    if (pixels == NULL) {
+        return NULL;
+    }
+    int size = width * height * sizeof(int);
+    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+    // staging buffer
+    VkBuffer staging_buffer;
+    VkDeviceMemory staging_buffer_memory;
+    if (!create_buffer(
+            (VkDeviceSize)size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            &staging_buffer,
+            &staging_buffer_memory))
+    {
+        return NULL;
+    }
+    if (!map_memory(staging_buffer_memory, pixels, size)) {
+        return NULL;
+    }
+    stbi_image_free(pixels);
+    // image
+    VkImageCreateInfo image_create_info = {
+        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        NULL,
+        0,
+        VK_IMAGE_TYPE_2D,
+        format,
+        { width, height, 1 },
+        1,
+        1,
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0,
+        NULL,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+    VkImage image;
+    res = vkCreateImage(g_device, &image_create_info, NULL, &image);
+    CHECK(NULL);
+    VkMemoryRequirements reqs;
+    vkGetImageMemoryRequirements(g_device, image, &reqs);
+    VkMemoryAllocateInfo allocate_info = {
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        NULL,
+        reqs.size,
+        0,
+    };
+    allocate_info.memoryTypeIndex = get_memory_type_index(
+        reqs,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+    );
+    VkDeviceMemory memory;
+    res = vkAllocateMemory(g_device, &allocate_info, NULL, &memory);
+    CHECK(NULL);
+    res = vkBindImageMemory(g_device, image, memory, 0);
+    CHECK(NULL);
+    // finish
+    Image *image_obj = (Image *)malloc(sizeof(Image));
+    image_obj->image = image;
+    image_obj->memory = memory;
+    return (void *)image_obj;
+}
+
+// ========================================================================= //
+//         Uniform Buffer Object API                                         //
+// ========================================================================= //
 
 void skd_scale(float x, float y, float z) {
     g_ubo.mat_scl.a11 = x;
