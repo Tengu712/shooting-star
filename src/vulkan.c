@@ -1,4 +1,9 @@
+#ifdef __linux__
 #define VK_USE_PLATFORM_XCB_KHR
+#endif
+#ifdef _WIN32
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
 #include <vulkan/vulkan.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,6 +143,7 @@ UniformBufferObject g_ubo;
 //         General Functions                                                 //
 // ========================================================================= //
 
+#ifdef __linux__
 int create_xcb_surface(SkdWindowParam *window_param) {
     const VkXcbSurfaceCreateInfoKHR ci = {
         VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
@@ -150,6 +156,29 @@ int create_xcb_surface(SkdWindowParam *window_param) {
     CHECK(0);
     return 1;
 }
+#else
+int create_xcb_surface(SkdWindowParam *window_param) {
+    return 0;
+}
+#endif
+#ifdef _WIN32
+int create_win32_surface(SkdWindowParam *window_param) {
+    VkWin32SurfaceCreateInfoKHR ci = {
+        VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+        NULL,
+        0,
+        window_param->data.winapi_window.hinst,
+        window_param->data.winapi_window.hwnd,
+    };
+    VkResult res = vkCreateWin32SurfaceKHR(g_instance, &ci, NULL, &g_surface);
+    CHECK(0);
+    return 1;
+}
+#else
+int create_win32_surface(SkdWindowParam *window_param) {
+    return 0;
+}
+#endif
 
 int get_memory_type_index(
     VkMemoryRequirements reqs,
@@ -383,6 +412,11 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
     switch (window_param->kind) {
         case SKD_WIN_KIND_XCB:
             if (create_xcb_surface(window_param) != 1) {
+                return EMSG_CREATE_SURFACE;
+            }
+            break;
+        case SKD_WIN_KIND_WINAPI:
+            if (create_win32_surface(window_param) != 1) {
                 return EMSG_CREATE_SURFACE;
             }
             break;
