@@ -14,10 +14,10 @@ int main() {
     int res;
     res = skd_create_window("test program", 640, 480);
     CHECK("failed to create a window.\n");
-    SkdWindowParam *window_param = skd_create_window_param();
-    res = skd_init_vulkan(window_param);
+    SkdWindowParam window_param = {};
+    skd_create_window_param(&window_param);
+    res = skd_init_vulkan(&window_param);
     CHECK("failed to init Vulkan.\n");
-    free(window_param);
     while (1) {
         if (skd_do_window_events() == 1) break;
         unsigned int id;

@@ -28,13 +28,10 @@ xcb_connection_t *g_connection;
 xcb_window_t g_window;
 xcb_intern_atom_reply_t *g_atom_delete_window;
 
-SkdWindowParam *skd_create_window_param(void) {
-    SkdWindowParam *window_param =
-        (SkdWindowParam *)malloc(sizeof(SkdWindowParam));
-    window_param->kind = SKD_WIN_KIND_XCB;
-    window_param->data.xcb_window.connection = g_connection;
-    window_param->data.xcb_window.window = g_window;
-    return window_param;
+void skd_create_window_param(SkdWindowParam *out) {
+    out->kind = SKD_WIN_KIND_XCB;
+    out->data.xcb_window.connection = g_connection;
+    out->data.xcb_window.window = g_window;
 }
 
 const char *skd_get_window_error_message(int res) {

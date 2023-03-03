@@ -3,7 +3,7 @@
 #include "common_window_vulkan.h"
 
 // A function to create window param based on each implementation.
-SkdWindowParam *skd_create_window_param(void);
+void skd_create_window_param(SkdWindowParam *out);
 
 // A function to get error message.
 const char *skd_get_window_error_message(int res);

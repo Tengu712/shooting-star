@@ -20,13 +20,10 @@ LRESULT WINAPI WindowProcedure(HWND hwnd, unsigned int msg, WPARAM wparam, LPARA
     return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
-SkdWindowParam *skd_create_window_param(void) {
-    SkdWindowParam *window_param = 
-        (SkdWindowParam *)malloc(sizeof(SkdWindowParam));
-    window_param->kind = SKD_WIN_KIND_WINAPI;
-    window_param->data.winapi_window.hinst = (void *)g_hinst;
-    window_param->data.winapi_window.hwnd = (void *)g_hwnd;
-    return window_param;
+void skd_create_window_param(SkdWindowParam *out) {
+    out->kind = SKD_WIN_KIND_WINAPI;
+    out->data.winapi_window.hinst = (void *)g_hinst;
+    out->data.winapi_window.hwnd = (void *)g_hwnd;
 }
 
 const char *skd_get_window_error_message(int res) {
