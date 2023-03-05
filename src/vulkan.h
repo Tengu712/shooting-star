@@ -2,47 +2,15 @@
 
 #include "common_window_vulkan.h"
 
-enum EMSG_VULKAN {
-    EMSG_SUCCESS = 0,
-    EMSG_ENUM_INST_EXT_PROPS,
-    EMSG_CREATE_INST,
-    EMSG_ENUM_PHYS_DEVICES,
-    EMSG_FIND_QUEUE_FAMILY_INDEX,
-    EMSG_ENUM_DEVICE_EXT_PROPS,
-    EMSG_CREATE_DEVICE,
-    EMSG_CREATE_SURFACE,
-    EMSG_GET_SURFACE_FORMATS,
-    EMSG_GET_SURFACE_CAPABILITIES,
-    EMSG_CREATE_RENDER_PASS,
-    EMSG_CREATE_SWAPCHAIN,
-    EMSG_GET_IMAGES,
-    EMSG_CREATE_IMAGE_VIEW,
-    EMSG_CREATE_FRAMEBUFFER,
-    EMSG_CREATE_COMMAND_POOL,
-    EMSG_ALLOCATE_COMMAND_BUFFERS,
-    EMSG_CREATE_FENCE,
-    EMSG_CREATE_SEMAPHORE,
-    EMSG_CREATE_PIPELINE_LAYOUT,
-    EMSG_CREATE_SHADER,
-    EMSG_CREATE_BUFFER,
-    EMSG_CREATE_SAMPLER,
-    EMSG_CREATE_DESCRIPTOR,
-    EMSG_CREATE_PIPELINE,
-    EMSG_CREATE_SQUARE,
-    EMSG_MAP_UBO,
-    // image
-    EMSG_NULL_OUT_IMAGE,
-    EMSG_INVALID_IMAGE_FORMAT,
-    EMSG_LOAD_IMAGE,
-    EMSG_LOAD_IMAGE_FILE,
-};
-
 typedef struct Image_t {
     void *image;
     void *view;
     void *memory;
 } Image;
 
+// A function to get error message.
+const char *skd_get_vulkan_error_message(int res);
+const char *skd_get_image_error_message(int res);
 
 // A function to initialize Vulkan.
 // It returns 0 if it succeeded.
@@ -53,15 +21,15 @@ void skd_terminate_vulkan(void);
 
 // A function to begin to render.
 // To save processing image id, passed first parameter.
-// It returns 0 if it succeeded.
+// It returns 1 if it succeeded.
 int skd_begin_render(unsigned int *p_id, float r, float g, float b);
 
 // A function to end to render.
-// It returns 0 if it succeeded.
+// It returns 1 if it succeeded.
 int skd_end_render(unsigned int id);
 
 // A function to draw square.
-// It returns 0 if it succeeded.
+// It returns 1 if it succeeded.
 int skd_draw(int id);
 
 // A function to load an image from memory.

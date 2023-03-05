@@ -14,7 +14,116 @@
 
 #include <stdio.h>
 
-#define CHECK(p) if (res != VK_SUCCESS) return (p);
+#define CHECK(p) if (res != 0) return (p);
+
+enum EMSG_VULKAN {
+    EMSG_ENUM_INST_EXT_PROPS = 1,
+    EMSG_CREATE_INST,
+    EMSG_ENUM_PHYS_DEVICES,
+    EMSG_FIND_QUEUE_FAMILY_INDEX,
+    EMSG_ENUM_DEVICE_EXT_PROPS,
+    EMSG_CREATE_DEVICE,
+    EMSG_CREATE_SURFACE,
+    EMSG_GET_SURFACE_FORMATS,
+    EMSG_GET_SURFACE_CAPABILITIES,
+    EMSG_CREATE_RENDER_PASS,
+    EMSG_CREATE_SWAPCHAIN,
+    EMSG_GET_IMAGES,
+    EMSG_CREATE_IMAGE_VIEW,
+    EMSG_CREATE_FRAMEBUFFER,
+    EMSG_CREATE_COMMAND_POOL,
+    EMSG_ALLOCATE_COMMAND_BUFFERS,
+    EMSG_CREATE_FENCE,
+    EMSG_CREATE_SEMAPHORE,
+    EMSG_CREATE_PIPELINE_LAYOUT,
+    EMSG_CREATE_SHADER,
+    EMSG_CREATE_UNIFORM_BUFFER,
+    EMSG_CREATE_SAMPLER,
+    EMSG_CREATE_DESCRIPTOR,
+    EMSG_CREATE_PIPELINE,
+    EMSG_CREATE_SQUARE,
+    EMSG_MAP_UBO,
+    // image
+    EMSG_NULL_OUT_IMAGE,
+    EMSG_INVALID_IMAGE_FORMAT,
+    EMSG_LOAD_IMAGE_FILE,
+    EMSG_LOAD_IMAGE,
+};
+
+const char *skd_get_vulkan_error_message(int res) {
+    switch (res) {
+        case EMSG_ENUM_INST_EXT_PROPS:
+            return "enumerating Vulkan instance extention properties";
+        case EMSG_CREATE_INST:
+            return "creating Vulkan instance";
+        case EMSG_ENUM_PHYS_DEVICES:
+            return "enumerating physical devices";
+        case EMSG_FIND_QUEUE_FAMILY_INDEX:
+            return "finding queue family index";
+        case EMSG_ENUM_DEVICE_EXT_PROPS:
+            return "enumerating device extention properties";
+        case EMSG_CREATE_DEVICE:
+            return "creating device";
+        case EMSG_CREATE_SURFACE:
+            return "creating surface";
+        case EMSG_GET_SURFACE_FORMATS:
+            return "getting surface formats";
+        case EMSG_GET_SURFACE_CAPABILITIES:
+            return "getting surface capabiities";
+        case EMSG_CREATE_RENDER_PASS:
+            return "creating render pass";
+        case EMSG_CREATE_SWAPCHAIN:
+            return "creating swapchain";
+        case EMSG_GET_IMAGES:
+            return "getting images";
+        case EMSG_CREATE_IMAGE_VIEW:
+            return "creating image view";
+        case EMSG_CREATE_FRAMEBUFFER:
+            return "creating framebuffer";
+        case EMSG_CREATE_COMMAND_POOL:
+            return "creating command pool";
+        case EMSG_ALLOCATE_COMMAND_BUFFERS:
+            return "allocating command buffers";
+        case EMSG_CREATE_FENCE:
+            return "creating fence";
+        case EMSG_CREATE_SEMAPHORE:
+            return "creating semaphore";
+        case EMSG_CREATE_PIPELINE_LAYOUT:
+            return "creating pipeline layout";
+        case EMSG_CREATE_SHADER:
+            return "creating shader";
+        case EMSG_CREATE_UNIFORM_BUFFER:
+            return "creating uniform buffer";
+        case EMSG_CREATE_SAMPLER:
+            return "creating sampler";
+        case EMSG_CREATE_DESCRIPTOR:
+            return "creating descriptor";
+        case EMSG_CREATE_PIPELINE:
+            return "creating pipeline";
+        case EMSG_CREATE_SQUARE:
+            return "creating square sprite";
+        case EMSG_MAP_UBO:
+            return "mapping uniform buffer object";
+        default:
+            return "unexpected";
+    }
+}
+             
+const char *skd_get_image_error_message(int res) {
+    switch (res) {
+        case EMSG_NULL_OUT_IMAGE:
+            return "trying to store image to null Image";
+        case EMSG_INVALID_IMAGE_FORMAT:
+            return "image format must be RGBA";
+        case EMSG_LOAD_IMAGE_FILE:
+            return "loading image file";
+        case EMSG_LOAD_IMAGE:
+            return "loading image";
+        default:
+            return "unexpected";
+    }
+}
+
 
 // ========================================================================= //
 //         Structs                                                           //
@@ -684,7 +793,7 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
             &g_uniform_buffer,
             &g_uniform_buffer_memory))
     {
-        return EMSG_CREATE_BUFFER;
+        return EMSG_CREATE_UNIFORM_BUFFER;
     }
 
     // sampler
@@ -711,7 +820,7 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
     res = vkCreateSampler(g_device, &sampler_create_info, NULL, &g_sampler);
     CHECK(EMSG_CREATE_SAMPLER);
     const unsigned char pixels[] = { 0, 0, 0, 0 };
-    if (skd_load_image_from_memory(pixels, 1, 1, &g_empty_image) != EMSG_SUCCESS) {
+    if (skd_load_image_from_memory(pixels, 1, 1, &g_empty_image) != 0) {
         return EMSG_CREATE_SAMPLER;
     }
 
@@ -1435,7 +1544,7 @@ int skd_load_image_from_memory(
     out->image = image;
     out->view = view;
     out->memory = memory;
-    return EMSG_SUCCESS;
+    return 0;
 }
 
 int skd_load_image_from_file(const char *path, Image *out) {

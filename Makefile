@@ -1,5 +1,5 @@
-.PHONY: build_linux
-.PHONY: build_windows
+.PHONY: linux
+.PHONY: windows
 .PHONY: clean
 
 ifeq ($(OS),Windows_NT)
@@ -8,26 +8,28 @@ else
 	bin2c := bin2c/bin2c
 endif
 
-linux:		src/*.h tmp/window_linux.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
+linux:		tmp/main.o tmp/window_linux.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
 	gcc -o fireball \
+	  tmp/main.o \
 	  tmp/window_linux.o \
 	  tmp/vulkan.o \
 	  tmp/shader.vert.o \
 	  tmp/shader.frag.o \
-	  test.c \
 	  -L. \
 	  -lm \
 	  -lxcb \
 	  -lvulkan
-windows:	tmp/window_windows.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
+windows:	tmp/main.o tmp/window_windows.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
 	gcc -o fireball.exe \
+	  tmp/main.o \
 	  tmp/window_windows.o \
 	  tmp/vulkan.o \
 	  tmp/shader.vert.o \
 	  tmp/shader.frag.o \
-	  test.c \
 	  -L. \
 	  -lvulkan-1
+tmp/main.o:		src/common_window_vulkan.h src/window.h src/vulkan.c src/main.c
+	gcc -c -o tmp/main.o src/main.c
 tmp/window_linux.o:	src/common_window_vulkan.h src/window.h src/window_linux.c
 	gcc -c -o tmp/window_linux.o src/window_linux.c
 tmp/window_windows.o:	src/common_window_vulkan.h src/window.h src/window_windows.c
@@ -45,5 +47,5 @@ tmp/shader.frag.o:	$(bin2c) src/shader.frag
 $(bin2c):	bin2c/bin2c.rs
 	rustc -o bin2c/bin2c bin2c/bin2c.rs
 clean:
-	rm -rf fireball bin2c/bin2c tmp
+	rm -rf fireball $(bin2c) tmp
 	mkdir tmp
