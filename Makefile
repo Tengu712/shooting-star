@@ -8,7 +8,7 @@ else
 	bin2c := bin2c/bin2c
 endif
 
-linux:		tmp/window_linux.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
+linux:		src/*.h tmp/window_linux.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
 	gcc -o fireball \
 	  tmp/window_linux.o \
 	  tmp/vulkan.o \
@@ -28,11 +28,11 @@ windows:	tmp/window_windows.o tmp/vulkan.o tmp/shader.vert.o tmp/shader.frag.o
 	  test.c \
 	  -L. \
 	  -lvulkan-1
-tmp/window_linux.o:	src/window_linux.c
+tmp/window_linux.o:	src/common_window_vulkan.h src/window.h src/window_linux.c
 	gcc -c -o tmp/window_linux.o src/window_linux.c
-tmp/window_windows.o:	src/window_windows.c
+tmp/window_windows.o:	src/common_window_vulkan.h src/window.h src/window_windows.c
 	gcc -c -o tmp/window_windows.o src/window_windows.c
-tmp/vulkan.o:	src/vulkan.c
+tmp/vulkan.o:		src/vulkan.h src/vulkan.c
 	gcc -c -o tmp/vulkan.o src/vulkan.c
 tmp/shader.vert.o:	$(bin2c) src/shader.vert
 	glslc src/shader.vert -o tmp/shader.vert.spv

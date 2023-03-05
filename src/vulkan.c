@@ -1,3 +1,7 @@
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#include "vulkan.h"
+
 #ifdef __linux__
 #define VK_USE_PLATFORM_XCB_KHR
 #endif
@@ -8,36 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#include "vulkan.h"
+#include <stdio.h>
 
 #define CHECK(p) if (res != VK_SUCCESS) return (p);
-#define EMSG_ENUM_INST_EXT_PROPS 1
-#define EMSG_CREATE_INST 2
-#define EMSG_ENUM_PHYS_DEVICES 3
-#define EMSG_FIND_QUEUE_FAMILY_INDEX 4
-#define EMSG_ENUM_DEVICE_EXT_PROPS 5
-#define EMSG_CREATE_DEVICE 6
-#define EMSG_CREATE_SURFACE 7
-#define EMSG_GET_SURFACE_FORMATS 8
-#define EMSG_GET_SURFACE_CAPABILITIES 9
-#define EMSG_CREATE_RENDER_PASS 10
-#define EMSG_CREATE_SWAPCHAIN 11
-#define EMSG_GET_IMAGES 12
-#define EMSG_CREATE_IMAGE_VIEW 13
-#define EMSG_CREATE_FRAMEBUFFER 14
-#define EMSG_CREATE_COMMAND_POOL 15
-#define EMSG_ALLOCATE_COMMAND_BUFFERS 16
-#define EMSG_CREATE_FENCE 17
-#define EMSG_CREATE_SEMAPHORE 18
-#define EMSG_CREATE_PIPELINE_LAYOUT 19
-#define EMSG_CREATE_SHADER 20
-#define EMSG_CREATE_BUFFER 21
-#define EMSG_CREATE_DESCRIPTOR 22
-#define EMSG_CREATE_PIPELINE 23
-#define EMSG_CREATE_SQUARE 24
-#define EMSG_MAP_UBO 25
 
 // ========================================================================= //
 //         Structs                                                           //
@@ -85,6 +62,8 @@ typedef struct Vertex_t {
     float pos_x;
     float pos_y;
     float pos_z;
+    float uv_u;
+    float uv_v;
 } Vertex;
 
 typedef struct Model_t {
@@ -94,11 +73,6 @@ typedef struct Model_t {
     VkDeviceMemory vertex_buffer_memory;
     VkDeviceMemory index_buffer_memory;
 } Model;
-
-typedef struct Image_t {
-    VkImage image;
-    VkDeviceMemory memory;
-} Image;
 
 extern char shader_vert_data[];
 extern int shader_vert_size;
@@ -138,6 +112,8 @@ VkPipeline g_pipeline;
 Model g_square;
 int g_is_ubo_updated;
 UniformBufferObject g_ubo;
+VkSampler g_sampler;
+Image g_empty_image;
 
 // ========================================================================= //
 //         General Functions                                                 //
@@ -711,20 +687,57 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
         return EMSG_CREATE_BUFFER;
     }
 
-    // descriptor
-    VkDescriptorSetLayoutBinding descriptor_set_layout_binding = {
-        0,
-        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        1,
-        VK_SHADER_STAGE_VERTEX_BIT,
+    // sampler
+    VkSamplerCreateInfo sampler_create_info = {
+        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         NULL,
+        0,
+        VK_FILTER_LINEAR,
+        VK_FILTER_LINEAR,
+        VK_SAMPLER_MIPMAP_MODE_NEAREST,
+        VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        VK_SAMPLER_ADDRESS_MODE_REPEAT,
+        0.0,
+        0,
+        1.0,
+        0,
+        VK_COMPARE_OP_NEVER,
+        0.0,
+        0.0,
+        VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+        0,
+    };
+    res = vkCreateSampler(g_device, &sampler_create_info, NULL, &g_sampler);
+    CHECK(EMSG_CREATE_SAMPLER);
+    const unsigned char pixels[] = { 0, 0, 0, 0 };
+    if (skd_load_image_from_memory(pixels, 1, 1, &g_empty_image) != EMSG_SUCCESS) {
+        return EMSG_CREATE_SAMPLER;
+    }
+
+    // descriptor
+    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
+        {
+            0,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            1,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            NULL,
+        },
+        {
+            1,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            1,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            NULL,
+        },
     };
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         NULL,
         0,
-        1,
-        &descriptor_set_layout_binding,
+        2,
+        descriptor_set_layout_bindings,
     };
     res = vkCreateDescriptorSetLayout(
         g_device,
@@ -770,22 +783,41 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
         0,
         VK_WHOLE_SIZE,
     };
-    VkWriteDescriptorSet uniform_buffer_write_descriptor_set = {
-        VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        NULL,
-        g_descriptor_set,
-        0,
-        0,
-        1,
-        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        NULL,
-        &uniform_buffer_descriptor_buffer_info,
-        NULL,
+    VkDescriptorImageInfo sampler_descriptor_image_info = {
+        g_sampler,
+        g_empty_image.view,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    };
+    VkWriteDescriptorSet uniform_buffer_write_descriptor_sets[] = {
+        {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            NULL,
+            g_descriptor_set,
+            0,
+            0,
+            1,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            NULL,
+            &uniform_buffer_descriptor_buffer_info,
+            NULL,
+        },
+        {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            NULL,
+            g_descriptor_set,
+            1,
+            0,
+            1,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            &sampler_descriptor_image_info,
+            NULL,
+            NULL,
+        },
     };
     vkUpdateDescriptorSets(
         g_device,
-        1,
-        &uniform_buffer_write_descriptor_set,
+        2,
+        uniform_buffer_write_descriptor_sets,
         0,
         NULL
     );
@@ -833,7 +865,8 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
         VK_VERTEX_INPUT_RATE_VERTEX,
     };
     VkVertexInputAttributeDescription vertex_input_attribute_desc[] = {
-        { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0},
+        { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+        { 1, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 3 },
     };
     VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -841,7 +874,7 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
         0,
         1,
         &vertex_input_binding_desc,
-        1,
+        2,
         vertex_input_attribute_desc,
     };
     VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {
@@ -956,10 +989,10 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
 
     // g_square model
     Vertex vtxs[4] = {
-        { -0.5f, -0.5f, 0.0f },
-        { -0.5f,  0.5f, 0.0f },
-        {  0.5f,  0.5f, 0.0f },
-        {  0.5f, -0.5f, 0.0f },
+        { -0.5f, -0.5f, 0.0f, 0.0f, 0.0f },
+        { -0.5f,  0.5f, 0.0f, 0.0f, 1.0f },
+        {  0.5f,  0.5f, 0.0f, 1.0f, 1.0f },
+        {  0.5f, -0.5f, 0.0f, 1.0f, 0.0f },
     };
     uint32_t idxs[6] = { 0, 1, 2, 0, 2, 3 };
     g_square.index_cnt = 6;
@@ -1036,6 +1069,8 @@ void skd_terminate_vulkan(void) {
     vkDestroyPipelineLayout(g_device, g_pipeline_layout, NULL);
     vkDestroyDescriptorPool(g_device, g_descriptor_pool, NULL);
     vkDestroyDescriptorSetLayout(g_device, g_descriptor_set_layout, NULL);
+    skd_unload_image(&g_empty_image);
+    vkDestroySampler(g_device, g_sampler, NULL);
     vkFreeMemory(g_device, g_uniform_buffer_memory, NULL);
     vkDestroyBuffer(g_device, g_uniform_buffer, NULL);
     vkDestroyShaderModule(g_device, g_vert_shader, NULL);
@@ -1211,17 +1246,18 @@ int skd_draw(int id) {
 //         Image API                                                         //
 // ========================================================================= //
 
-void *skd_load_image_from_file(const char *path) {
-    VkResult res;
-    int width = 0;
-    int height = 0;
-    int channels = 0;
-    unsigned char *pixels = stbi_load(path, &width, &height, &channels, 0);
-    if (pixels == NULL) {
-        return NULL;
+int skd_load_image_from_memory(
+    const unsigned char *pixels,
+    int width,
+    int height,
+    Image *out
+) {
+    if (out == NULL) {
+        return EMSG_NULL_OUT_IMAGE;
     }
-    int size = width * height * sizeof(int);
+    VkResult res;
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+    const int size = width * height * 4;
     // staging buffer
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
@@ -1232,12 +1268,12 @@ void *skd_load_image_from_file(const char *path) {
             &staging_buffer,
             &staging_buffer_memory))
     {
-        return NULL;
+        return EMSG_LOAD_IMAGE;
     }
-    if (!map_memory(staging_buffer_memory, pixels, size)) {
-        return NULL;
+    if (!map_memory(staging_buffer_memory, (void *)pixels, size)) {
+        return EMSG_LOAD_IMAGE;
     }
-    stbi_image_free(pixels);
+    stbi_image_free((void *)pixels);
     // image
     VkImageCreateInfo image_create_info = {
         VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -1258,7 +1294,7 @@ void *skd_load_image_from_file(const char *path) {
     };
     VkImage image;
     res = vkCreateImage(g_device, &image_create_info, NULL, &image);
-    CHECK(NULL);
+    CHECK(EMSG_LOAD_IMAGE);
     VkMemoryRequirements reqs;
     vkGetImageMemoryRequirements(g_device, image, &reqs);
     VkMemoryAllocateInfo allocate_info = {
@@ -1273,16 +1309,193 @@ void *skd_load_image_from_file(const char *path) {
     );
     VkDeviceMemory memory;
     res = vkAllocateMemory(g_device, &allocate_info, NULL, &memory);
-    CHECK(NULL);
+    CHECK(EMSG_LOAD_IMAGE);
     res = vkBindImageMemory(g_device, image, memory, 0);
-    CHECK(NULL);
+    CHECK(EMSG_LOAD_IMAGE);
+    // begin copy command
+    VkBufferImageCopy copy_region = {
+        0,
+        0,
+        0,
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 },
+        { 0, 0, 0 },
+        { width, height, 1 },
+    };
+    VkCommandBufferAllocateInfo command_buffer_allocate_info = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        NULL,
+        g_command_pool,
+        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        1,
+    };
+    VkCommandBuffer command;
+    res = vkAllocateCommandBuffers(
+        g_device,
+        &command_buffer_allocate_info,
+        &command
+    );
+    CHECK(EMSG_LOAD_IMAGE);
+    VkCommandBufferBeginInfo command_buffer_begin_info = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        NULL,
+        0,
+        NULL,
+    };
+    res = vkBeginCommandBuffer(command, &command_buffer_begin_info);
+    CHECK(EMSG_LOAD_IMAGE);
+    // copy buffer to image
+    VkImageMemoryBarrier image_memory_barrier = {
+        VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        NULL,
+        0,
+        VK_ACCESS_TRANSFER_WRITE_BIT,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        image,
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+    };
+    vkCmdPipelineBarrier(
+        command,
+        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0,
+        0,
+        NULL,
+        0,
+        NULL,
+        1,
+        &image_memory_barrier
+    );
+    vkCmdCopyBufferToImage(
+        command,
+        staging_buffer,
+        image,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &copy_region
+    );
+    image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    image_memory_barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    vkCmdPipelineBarrier(
+        command,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0,
+        0,
+        NULL,
+        0,
+        NULL,
+        1,
+        &image_memory_barrier
+    );
+    // end command
+    vkEndCommandBuffer(command);
+    // image view
+    VkSubmitInfo submit_info = {
+        VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        NULL,
+        0,
+        NULL,
+        NULL,
+        1,
+        &command,
+        0,
+        NULL,
+    };
+    res = vkQueueSubmit(g_queue, 1, &submit_info, VK_NULL_HANDLE);
+    CHECK(EMSG_LOAD_IMAGE);
+    VkImageViewCreateInfo image_view_create_info = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        NULL,
+        0,
+        image,
+        VK_IMAGE_VIEW_TYPE_2D,
+        format,
+        {
+            VK_COMPONENT_SWIZZLE_R,
+            VK_COMPONENT_SWIZZLE_G,
+            VK_COMPONENT_SWIZZLE_B,
+            VK_COMPONENT_SWIZZLE_A,
+        },
+        { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+    };
+    VkImageView view;
+    res = vkCreateImageView(g_device, &image_view_create_info, NULL, &view);
+    CHECK(EMSG_LOAD_IMAGE);
     // finish
-    Image *image_obj = (Image *)malloc(sizeof(Image));
-    image_obj->image = image;
-    image_obj->memory = memory;
-    return (void *)image_obj;
+    res = vkDeviceWaitIdle(g_device);
+    CHECK(EMSG_LOAD_IMAGE);
+    vkFreeCommandBuffers(g_device, g_command_pool, 1, &command);
+    vkFreeMemory(g_device, staging_buffer_memory, NULL);
+    vkDestroyBuffer(g_device, staging_buffer, NULL);
+    out->image = image;
+    out->view = view;
+    out->memory = memory;
+    return EMSG_SUCCESS;
 }
 
+int skd_load_image_from_file(const char *path, Image *out) {
+    int width = 0;
+    int height = 0;
+    int channel_cnt = 0;
+    unsigned char *pixels = stbi_load(path, &width, &height, &channel_cnt, 0);
+    if (pixels == NULL) {
+        return EMSG_LOAD_IMAGE_FILE;
+    }
+    if (channel_cnt != 4) {
+        return EMSG_INVALID_IMAGE_FORMAT;
+    }
+    return skd_load_image_from_memory(pixels, width, height, out);
+}
+
+void skd_set_image(Image *image) {
+    if (image == NULL) {
+        g_ubo.vec_param.x = 0.0;
+    } else {
+        VkDescriptorImageInfo sampler_descriptor_image_info = {
+            g_sampler,
+            image->view,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+        VkWriteDescriptorSet uniform_buffer_write_descriptor_set = {
+            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            NULL,
+            g_descriptor_set,
+            1,
+            0,
+            1,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            &sampler_descriptor_image_info,
+            NULL,
+            NULL,
+        };
+        vkUpdateDescriptorSets(
+            g_device,
+            1,
+            &uniform_buffer_write_descriptor_set,
+            0,
+            NULL
+        );
+        g_ubo.vec_param.x = 1.0;
+    }
+    g_is_ubo_updated = 1;
+}
+
+void skd_unload_image(Image *image) {
+    if (image == NULL) {
+        return;
+    }
+    skd_set_image(NULL);
+    vkDeviceWaitIdle(g_device);
+    vkDestroyImageView(g_device, image->view, NULL);
+    vkDestroyImage(g_device, image->image, NULL);
+    vkFreeMemory(g_device, image->memory, NULL);
+}
+    
 // ========================================================================= //
 //         Uniform Buffer Object API                                         //
 // ========================================================================= //
@@ -1306,13 +1519,5 @@ void skd_uv(float u, float v, float u_end, float v_end) {
     g_ubo.vec_uv.y = v;
     g_ubo.vec_uv.z = u_end;
     g_ubo.vec_uv.w = v_end;
-    g_is_ubo_updated = 1;
-}
-
-void skd_param(float x, float y, float z, float w) {
-    g_ubo.vec_param.x = x;
-    g_ubo.vec_param.y = y;
-    g_ubo.vec_param.z = z;
-    g_ubo.vec_param.w = w;
     g_is_ubo_updated = 1;
 }
