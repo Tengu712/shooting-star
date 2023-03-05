@@ -938,11 +938,11 @@ int skd_init_vulkan(SkdWindowParam *window_param) {
         | VK_COLOR_COMPONENT_A_BIT;
     VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
         VK_TRUE,
-        VK_BLEND_FACTOR_ONE,
-        VK_BLEND_FACTOR_ZERO,
+        VK_BLEND_FACTOR_SRC_ALPHA,
+        VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
         VK_BLEND_OP_ADD,
-        VK_BLEND_FACTOR_ONE,
-        VK_BLEND_FACTOR_ZERO,
+        VK_BLEND_FACTOR_SRC_ALPHA,
+        VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
         VK_BLEND_OP_ADD,
         color_component_flag,
     };
