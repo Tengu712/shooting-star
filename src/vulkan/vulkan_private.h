@@ -12,7 +12,6 @@
 #include <string.h>
 
 #define CHECK(p) if (res != 0) return (p);
-#define FRAME_DATA_CNT 1
 
 // A struct for model buffer.
 typedef struct Model_t {
@@ -29,12 +28,12 @@ typedef struct Camera_t {
     VkDeviceMemory buffer_memory;
 } Camera;
 
-// TODO:
-struct Image_t {
+// A struct for image texture.
+typedef struct Image_t {
     VkImage image;
     VkImageView view;
     VkDeviceMemory memory;
-};
+} Image;
 
 // TODO: struct
 typedef struct VulkanApp_t {
@@ -61,15 +60,19 @@ typedef struct VulkanApp_t {
     VkSampler sampler;
     struct FrameData_t {
         VkCommandBuffer command_buffer;
-        VkDescriptorSet descriptor_set;
         VkFence fence;
         VkSemaphore render_semaphore;
         VkSemaphore present_semaphore;
     } framedata;
     struct Resource_t {
-        Model square;
+        // it's the same as max_image_texture_num
+        unsigned int max_descriptor_set_num;
+        VkDescriptorSet *descriptor_sets;
         Camera camera;
-        Image empty_image;
+        // it's guaranteed to be greater than 1
+        unsigned int max_image_texture_num;
+        Image *image_textures;
+        Model square;
     } resource;
 } VulkanApp;
 
@@ -156,3 +159,12 @@ inline static int map_memory(
     vkUnmapMemory(app->device, device_memory);
     return 1;
 }
+
+// A function to load image texture into app.resource.image_textures[id].
+// WARN: it overwrites data at `id` and doesn't update descriptor set.
+vkres_t load_image_texture(
+    const unsigned char *pixels,
+    int width,
+    int height,
+    int id
+);

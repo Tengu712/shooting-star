@@ -72,7 +72,7 @@ int skd_begin_render(unsigned int id, float r, float g, float b) {
         app.pipeline_layout,
         0,
         1,
-        &app.framedata.descriptor_set,
+        &app.resource.descriptor_sets[0],
         0,
         NULL
     );

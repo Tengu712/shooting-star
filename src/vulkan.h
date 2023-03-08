@@ -30,18 +30,24 @@ typedef enum EMSG_VULKAN {
     EMSG_CREATE_PIPELINE_LAYOUT,
     EMSG_CREATE_SHADER,
     EMSG_CREATE_SAMPLER,
-    EMSG_CREATE_DESCRIPTOR,
+    EMSG_CREATE_DESCRIPTOR_POOL,
+    EMSG_CREATE_DESCRIPTOR_SET_LAYOUT,
+    EMSG_CREATE_DESCRIPTOR_SET,
     EMSG_CREATE_PIPELINE,
     EMSG_CREATE_SQUARE,
     EMSG_CREATE_CAMERA,
     EMSG_CREATE_EMPTY_IMAGE,
     // rendering
-    EMSG_UPDATE_CAMERA,
     // image
-    EMSG_NULL_OUT_IMAGE,
+    EMSG_NULL_OUT_IMAGE_TEXTURE_ID,
+    EMSG_IMAGE_OUT_OF_INDEX,
     EMSG_INVALID_IMAGE_FORMAT,
     EMSG_LOAD_IMAGE_FILE,
     EMSG_LOAD_IMAGE,
+    // descriptor sets
+    EMSG_UPDATE_CAMERA,
+    EMSG_USE_IMAGE_TEXTURE_OUT_OF_INDEX,
+    EMSG_USE_NULL_IMAGE_TEXTURE,
 } vkres_t;
 
 inline static const char *skd_get_vulkan_error_message(vkres_t res) {
@@ -88,8 +94,12 @@ inline static const char *skd_get_vulkan_error_message(vkres_t res) {
             return "creating shader";
         case EMSG_CREATE_SAMPLER:
             return "creating sampler";
-        case EMSG_CREATE_DESCRIPTOR:
-            return "creating descriptor";
+        case EMSG_CREATE_DESCRIPTOR_POOL:
+            return "creating descriptor pool";
+        case EMSG_CREATE_DESCRIPTOR_SET_LAYOUT:
+            return "creating descriptor set layout";
+        case EMSG_CREATE_DESCRIPTOR_SET:
+            return "creating descriptor set";
         case EMSG_CREATE_PIPELINE:
             return "creating pipeline";
         case EMSG_CREATE_SQUARE:
@@ -99,17 +109,24 @@ inline static const char *skd_get_vulkan_error_message(vkres_t res) {
         case EMSG_CREATE_EMPTY_IMAGE:
             return "creating empty image";
         // rendering
-        case EMSG_UPDATE_CAMERA:
-            return "updating camera";
         // image
-        case EMSG_NULL_OUT_IMAGE:
-            return "trying to store image to null Image";
+        case EMSG_NULL_OUT_IMAGE_TEXTURE_ID:
+            return "trying to store image to null image texture id";
+        case EMSG_IMAGE_OUT_OF_INDEX:
+            return "trying to register too many image textures";
         case EMSG_INVALID_IMAGE_FORMAT:
             return "image format must be RGBA";
         case EMSG_LOAD_IMAGE_FILE:
             return "loading image file";
         case EMSG_LOAD_IMAGE:
             return "loading image";
+        // descriptor sets
+        case EMSG_UPDATE_CAMERA:
+            return "updating camera";
+        case EMSG_USE_IMAGE_TEXTURE_OUT_OF_INDEX:
+            return "using image texture out of index";
+        case EMSG_USE_NULL_IMAGE_TEXTURE:
+            return "using null image texture";
         default:
             return "unexpected";
     }
@@ -118,8 +135,6 @@ inline static const char *skd_get_vulkan_error_message(vkres_t res) {
 // ========================================================================= //
 //         Structs                                                           //
 // ========================================================================= //
-
-typedef struct Image_t *Image;
 
 typedef struct Vec3_t {
     float x;
@@ -165,20 +180,17 @@ typedef struct ModelData_t {
 typedef struct CameraData_t {
     Vec3 view_pos;
     Vec3 view_rot;
-    int is_perse;
-    union {
-        struct Ortho {
-            float width;
-            float height;
-            float depth;
-        } ortho;
-        struct Perse {
-            float pov;
-            float aspect;
-            float near;
-            float far;
-        } perse;
-    } proj;
+    struct Ortho {
+        float width;
+        float height;
+        float depth;
+    } ortho;
+    struct Perse {
+        float pov;
+        float aspect;
+        float near;
+        float far;
+    } perse;
 } CameraData;
 
 #define DEFAULT_MODEL_DATA { \
@@ -190,12 +202,11 @@ typedef struct CameraData_t {
         { 0.0f, 0.0f, 0.0f, 0.0f }, \
     }
 
-// TODO:
 #define DEFAULT_CAMERA_DATA { \
         { 0.0f, 0.0f, 0.0f }, \
         { 0.0f, 0.0f, 0.0f }, \
-        0, \
         { 1.0f, 1.0f, 1.0f }, \
+        { 45.0f, 1.0f, 0.0f, 1.0f }, \
     }
 
 // ========================================================================= //
@@ -203,7 +214,10 @@ typedef struct CameraData_t {
 // ========================================================================= //
 
 // A function to initialize Vulkan.
-vkres_t skd_init_vulkan(SkdWindowParam *window_param);
+vkres_t skd_init_vulkan(
+    SkdWindowParam *window_param,
+    unsigned int max_image_num
+);
 
 // A terminator function.
 void skd_terminate_vulkan(void);
@@ -234,16 +248,30 @@ void skd_draw(ModelData *data);
 
 // A function to load an image from memory.
 // The number of channel of the image must be 4 (RGBA).
+// It set texture id to `out` parameter.
 vkres_t skd_load_image_from_memory(
     const unsigned char *pixels,
     int width,
     int height,
-    Image *out
+    unsigned int *out_id
 );
 
 // A function to load an image from file.
 // The number of channel of the image must be 4 (RGBA).
-vkres_t skd_load_image_from_file(const char *path, Image *out);
+// It set texture id to `out` parameter.
+vkres_t skd_load_image_from_file(const char *path, unsigned int *out_id);
 
 // A function to unload an image.
-void skd_unload_image(Image image);
+void skd_unload_image(unsigned int id);
+
+// ========================================================================= //
+//         Descriptor Sets                                                   //
+// ========================================================================= //
+
+// A function to update camera.
+// It overwrites camera uniform buffer data,
+// so you should call it once before rendering.
+vkres_t skd_update_camera(CameraData *cameradata);
+
+// A function to use image texture.
+vkres_t skd_use_image_texture(unsigned int id);

@@ -12,7 +12,7 @@ layout(push_constant) uniform PushConstant {
 layout(binding = 0) uniform CameraUniformData {
     vec3 view_pos;
     vec3 view_rot;
-    int is_perse;
+    vec3 ortho;
     vec4 proj;
 } camera;
 

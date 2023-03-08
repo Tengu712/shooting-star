@@ -7,8 +7,16 @@ extern int shader_frag_size;
 
 VulkanApp app;
 
-vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
+vkres_t skd_init_vulkan(
+    SkdWindowParam *window_param,
+    unsigned int max_image_texture_num
+) {
     VkResult res;
+    // NOTE: considering empty image
+    const unsigned int max_image_texture_num_add_1 = max_image_texture_num + 1;
+    // NOTE: as for Fireball the num of descriptor sets
+    // NOTE: is the same as that of image texture.
+    const unsigned int max_descriptor_set_num = max_image_texture_num_add_1;
 
     // instance
     int inst_ext_props_cnt = 0;
@@ -409,7 +417,6 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
     );
     CHECK(EMSG_CREATE_SHADER);
 
-/*
     // sampler
     VkSamplerCreateInfo sampler_create_info = {
         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -433,21 +440,25 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
     };
     res = vkCreateSampler(app.device, &sampler_create_info, NULL, &app.sampler);
     CHECK(EMSG_CREATE_SAMPLER);
-*/
 
-    // TODO: support sampler
     // descriptor
-    VkDescriptorPoolSize descriptor_pool_size = {
-        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-        FRAME_DATA_CNT,
+    VkDescriptorPoolSize descriptor_pool_sizes[] = {
+        {
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            1,
+        },
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+            max_image_texture_num_add_1,
+        },
     };
     VkDescriptorPoolCreateInfo descriptor_pool_create_info = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
         NULL,
         0,
-        FRAME_DATA_CNT,
-        1,
-        &descriptor_pool_size,
+        max_descriptor_set_num,
+        2,
+        descriptor_pool_sizes,
     };
     res = vkCreateDescriptorPool(
         app.device,
@@ -455,7 +466,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
         NULL,
         &app.descriptor_pool
     );
-    CHECK(EMSG_CREATE_DESCRIPTOR);
+    CHECK(EMSG_CREATE_DESCRIPTOR_POOL);
     VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
         {
             0,
@@ -464,7 +475,6 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
             VK_SHADER_STAGE_VERTEX_BIT,
             NULL,
         },
-/*
         {
             1,
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -472,13 +482,12 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
             VK_SHADER_STAGE_FRAGMENT_BIT,
             NULL,
         },
-*/
     };
     VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         NULL,
         0,
-        1,
+        2,
         descriptor_set_layout_bindings,
     };
     res = vkCreateDescriptorSetLayout(
@@ -487,7 +496,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
         NULL,
         &app.descriptor_set_layout
     );
-    CHECK(EMSG_CREATE_DESCRIPTOR);
+    CHECK(EMSG_CREATE_DESCRIPTOR_SET_LAYOUT);
 
     // push constant range
     VkPushConstantRange push_constant_range = {
@@ -661,7 +670,158 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
     );
     CHECK(EMSG_CREATE_PIPELINE);
 
+// frame data
+
+    // command buffers
+    const VkCommandBufferAllocateInfo command_buffer_allocate_info = {
+        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        NULL,
+        app.command_pool,
+        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        1,
+    };
+    res = vkAllocateCommandBuffers(
+        app.device,
+        &command_buffer_allocate_info,
+        &app.framedata.command_buffer
+    );
+    CHECK(EMSG_ALLOCATE_COMMAND_BUFFERS);
+
+    // fences
+    const VkFenceCreateInfo fence_create_info = {
+        VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        NULL,
+        VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+    res = vkCreateFence(app.device, &fence_create_info, NULL, &app.framedata.fence);
+    CHECK(EMSG_CREATE_FENCE);
+
+    // semaphores
+    const VkSemaphoreCreateInfo semaphore_create_info = {
+        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        NULL,
+        0,
+    };
+    res = vkCreateSemaphore(
+        app.device,
+        &semaphore_create_info,
+        NULL,
+        &app.framedata.render_semaphore
+    );
+    CHECK(EMSG_CREATE_SEMAPHORE);
+    res = vkCreateSemaphore(
+        app.device,
+        &semaphore_create_info,
+        NULL,
+        &app.framedata.present_semaphore
+    );
+    CHECK(EMSG_CREATE_SEMAPHORE);
+
 // rendering default objects
+
+    // descriptor sets #1
+    app.resource.max_descriptor_set_num = max_descriptor_set_num;
+    app.resource.descriptor_sets = (VkDescriptorSet *)malloc(
+        sizeof(VkDescriptorSet) * app.resource.max_descriptor_set_num
+    );
+
+    // camera
+    const CameraData default_camera_data = DEFAULT_CAMERA_DATA;
+    if (!create_buffer(
+            &app,
+            sizeof(CameraData),
+            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            &app.resource.camera.buffer,
+            &app.resource.camera.buffer_memory))
+    {
+        return EMSG_CREATE_CAMERA;
+    }
+    if (!map_memory(
+            &app,
+            app.resource.camera.buffer_memory,
+            (void *)&default_camera_data,
+            sizeof(CameraData)))
+    {
+        return EMSG_CREATE_SQUARE;
+    }
+
+    // image textures
+    app.resource.max_image_texture_num = max_image_texture_num_add_1;
+    app.resource.image_textures = 
+        (Image *)calloc(app.resource.max_image_texture_num, sizeof(Image));
+    // empty image
+    const unsigned char pixels[] = { 0xff, 0xff, 0xff, 0xff };
+    int dummy_texture_id = 0;
+    if (load_image_texture(
+            pixels,
+            1,
+            1,
+            0
+        ) != EMSG_VULKAN_SUCCESS)
+    {
+        return EMSG_CREATE_EMPTY_IMAGE;
+    }
+
+    // descriptor sets #2
+    for (int i = 0; i < app.resource.max_descriptor_set_num; ++i) {
+        VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
+            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            NULL,
+            app.descriptor_pool,
+            1,
+            &app.descriptor_set_layout,
+        };
+        res = vkAllocateDescriptorSets(
+            app.device,
+            &descriptor_set_allocate_info,
+            &app.resource.descriptor_sets[i]
+        );
+        CHECK(EMSG_CREATE_DESCRIPTOR_SET);
+        VkDescriptorBufferInfo camera_descriptor_buffer_info = {
+            app.resource.camera.buffer,
+            0,
+            VK_WHOLE_SIZE,
+        };
+        VkDescriptorImageInfo sampler_descriptor_image_info = {
+            app.sampler,
+            app.resource.image_textures[0].view,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        };
+        VkWriteDescriptorSet write_descriptor_sets[] = {
+            {
+                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                NULL,
+                app.resource.descriptor_sets[i],
+                0,
+                0,
+                1,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                NULL,
+                &camera_descriptor_buffer_info,
+                NULL,
+            },
+            {
+                VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                NULL,
+                app.resource.descriptor_sets[i],
+                1,
+                0,
+                1,
+                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                &sampler_descriptor_image_info,
+                NULL,
+                NULL,
+            },
+        };
+        vkUpdateDescriptorSets(
+            app.device,
+            2,
+            write_descriptor_sets,
+            0,
+            NULL
+        );
+    }
 
     // square
     float vtxs[4][5] = {
@@ -709,142 +869,6 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param) {
         return EMSG_CREATE_SQUARE;
     }
 
-    // camera
-    const CameraData default_camera_data = DEFAULT_CAMERA_DATA;
-    if (!create_buffer(
-            &app,
-            sizeof(CameraData),
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            &app.resource.camera.buffer,
-            &app.resource.camera.buffer_memory))
-    {
-        return EMSG_CREATE_CAMERA;
-    }
-    if (!map_memory(
-            &app,
-            app.resource.camera.buffer_memory,
-            (void *)&default_camera_data,
-            sizeof(CameraData)))
-    {
-        return EMSG_CREATE_SQUARE;
-    }
-
-    // empty image
-    const unsigned char pixels[] = { 0xff, 0xff, 0xff, 0xff };
-    if (skd_load_image_from_memory(pixels, 1, 1, &app.resource.empty_image) != 0) {
-        return EMSG_CREATE_EMPTY_IMAGE;
-    }
-
-// frame data
-
-    // command buffers
-    const VkCommandBufferAllocateInfo command_buffer_allocate_info = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        NULL,
-        app.command_pool,
-        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        1,
-    };
-    res = vkAllocateCommandBuffers(
-        app.device,
-        &command_buffer_allocate_info,
-        &app.framedata.command_buffer
-    );
-    CHECK(EMSG_ALLOCATE_COMMAND_BUFFERS);
-
-    // descriptor set
-    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
-        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        NULL,
-        app.descriptor_pool,
-        1,
-        &app.descriptor_set_layout,
-    };
-    res = vkAllocateDescriptorSets(
-        app.device,
-        &descriptor_set_allocate_info,
-        &app.framedata.descriptor_set
-    );
-    CHECK(EMSG_CREATE_DESCRIPTOR);
-    VkDescriptorBufferInfo camera_descriptor_buffer_info = {
-        app.resource.camera.buffer,
-        0,
-        VK_WHOLE_SIZE,
-    };
-    /*
-    VkDescriptorImageInfo sampler_descriptor_image_info = {
-        app.sampler,
-        app.resource.empty_image.view,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    };
-    */
-    VkWriteDescriptorSet write_descriptor_sets[] = {
-        {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            NULL,
-            app.framedata.descriptor_set,
-            0,
-            0,
-            1,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            NULL,
-            &camera_descriptor_buffer_info,
-            NULL,
-        },
-        /*
-        {
-            VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            NULL,
-            g_descriptor_set,
-            1,
-            0,
-            1,
-            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            &sampler_descriptor_image_info,
-            NULL,
-            NULL,
-        },
-        */
-    };
-    vkUpdateDescriptorSets(
-        app.device,
-        1,
-        write_descriptor_sets,
-        0,
-        NULL
-    );
-
-    // fences
-    const VkFenceCreateInfo fence_create_info = {
-        VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        NULL,
-        VK_FENCE_CREATE_SIGNALED_BIT,
-    };
-    res = vkCreateFence(app.device, &fence_create_info, NULL, &app.framedata.fence);
-    CHECK(EMSG_CREATE_FENCE);
-
-    // semaphores
-    const VkSemaphoreCreateInfo semaphore_create_info = {
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        NULL,
-        0,
-    };
-    res = vkCreateSemaphore(
-        app.device,
-        &semaphore_create_info,
-        NULL,
-        &app.framedata.render_semaphore
-    );
-    CHECK(EMSG_CREATE_SEMAPHORE);
-    res = vkCreateSemaphore(
-        app.device,
-        &semaphore_create_info,
-        NULL,
-        &app.framedata.present_semaphore
-    );
-    CHECK(EMSG_CREATE_SEMAPHORE);
-
     // finish
     return EMSG_VULKAN_SUCCESS;
 }
@@ -862,7 +886,10 @@ void skd_terminate_vulkan(void) {
         &app.framedata.command_buffer
     );
     // rendering default objects
-    skd_unload_image(app.resource.empty_image);
+    for (int i = 1; i < app.resource.max_image_texture_num; ++i) {
+        skd_unload_image(i);
+    }
+    skd_unload_image(0);
     vkFreeMemory(app.device, app.resource.camera.buffer_memory, NULL);
     vkDestroyBuffer(app.device, app.resource.camera.buffer, NULL);
     vkFreeMemory(app.device, app.resource.square.vertex_buffer_memory, NULL);
