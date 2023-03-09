@@ -1,4 +1,4 @@
-#include "vulkan_private.h"
+#include "private.h"
 
 extern char shader_vert_data[];
 extern int shader_vert_size;

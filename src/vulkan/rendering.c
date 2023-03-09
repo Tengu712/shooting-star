@@ -1,4 +1,4 @@
-#include "vulkan_private.h"
+#include "private.h"
 
 extern VulkanApp app;
 

@@ -1,8 +1,8 @@
+#include "../window.h"
+
 #include <xcb/xcb.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "window.h"
 
 #define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) return (p);
 #define EMSG_CONNECT_X 1

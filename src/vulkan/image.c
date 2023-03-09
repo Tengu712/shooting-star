@@ -1,8 +1,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "vulkan_private.h"
-
-#include <stdio.h>
+#include "private.h"
 
 extern VulkanApp app;
 
