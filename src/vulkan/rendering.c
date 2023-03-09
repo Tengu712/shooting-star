@@ -2,7 +2,7 @@
 
 extern VulkanApp app;
 
-int32_t skd_prepare_rendering(uint32_t *p_id) {
+vkres_t skd_prepare_rendering(uint32_t *p_id) {
     VkResult res;
     // get aquire image index
     uint32_t next_image_idx;
@@ -14,27 +14,21 @@ int32_t skd_prepare_rendering(uint32_t *p_id) {
         VK_NULL_HANDLE,
         &next_image_idx
     );
-    CHECK(0);
+    CHECK(EMSG_ACQUIRE_NEXT_IMAGE);
     // wait for a fence
     const VkFence fence = app.framedata.fence;
-    res = vkWaitForFences(
-        app.device,
-        1,
-        &fence,
-        VK_TRUE,
-        UINT64_MAX
-    );
-    CHECK(0);
+    res = vkWaitForFences(app.device, 1, &fence, VK_TRUE, UINT64_MAX);
+    CHECK(EMSG_WAIT_FOR_FENCE);
     // reset fences
     res = vkResetFences(app.device, 1, &fence);
-    CHECK(0);
+    CHECK(EMSG_RESET_FENCE);
     // TODO: reset command buffer?
     // finish
     *p_id = next_image_idx;
-    return 1;
+    return EMSG_VULKAN_SUCCESS;
 }
 
-int32_t skd_begin_render(uint32_t id, float r, float g, float b) {
+vkres_t skd_begin_render(uint32_t id, float r, float g, float b) {
     VkResult res;
     // begin command buffer
     const VkCommandBuffer command = app.framedata.command_buffer;
@@ -45,7 +39,7 @@ int32_t skd_begin_render(uint32_t id, float r, float g, float b) {
         NULL,
     };
     res = vkBeginCommandBuffer(command, &command_buffer_begin_info);
-    CHECK(0);
+    CHECK(EMSG_BEGIN_COMMAND_BUFFER);
     // begin render pass
     const VkClearValue clear_value = {{{ r, g, b, 0.0f }}};
     const VkExtent2D extent = { app.width, app.height };
@@ -58,11 +52,7 @@ int32_t skd_begin_render(uint32_t id, float r, float g, float b) {
         1,
         &clear_value,
     };
-    vkCmdBeginRenderPass(
-        command,
-        &render_pass_begin_info,
-        VK_SUBPASS_CONTENTS_INLINE
-    );
+    vkCmdBeginRenderPass(command, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     // bind pipeline
     vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, app.pipeline);
     // bind descriptor
@@ -79,17 +69,12 @@ int32_t skd_begin_render(uint32_t id, float r, float g, float b) {
     // bind square
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(command, 0, 1, &app.resource.square.vertex_buffer, &offset);
-    vkCmdBindIndexBuffer(
-        command,
-        app.resource.square.index_buffer,
-        offset,
-        VK_INDEX_TYPE_UINT32
-    );
+    vkCmdBindIndexBuffer(command, app.resource.square.index_buffer, offset, VK_INDEX_TYPE_UINT32);
     // finish
-    return 1;
+    return EMSG_VULKAN_SUCCESS;
 }
 
-int32_t skd_end_render(uint32_t id) {
+vkres_t skd_end_render(uint32_t id) {
     VkResult res;
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkFence fence = app.framedata.fence;
@@ -97,8 +82,7 @@ int32_t skd_end_render(uint32_t id) {
     vkCmdEndRenderPass(command);
     vkEndCommandBuffer(command);
     // submit
-    const VkPipelineStageFlags wait_stage_mask =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    const VkPipelineStageFlags wait_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     const VkSubmitInfo submit_info = {
         VK_STRUCTURE_TYPE_SUBMIT_INFO,
         NULL,
@@ -111,7 +95,7 @@ int32_t skd_end_render(uint32_t id) {
         &app.framedata.render_semaphore,
     };
     res = vkQueueSubmit(app.queue, 1, &submit_info, fence);
-    CHECK(0);
+    CHECK(EMSG_SUBMIT_QUEUE);
     // present
     VkPresentInfoKHR present_info = {
         VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -124,22 +108,15 @@ int32_t skd_end_render(uint32_t id) {
         &res,
     };
     res = vkQueuePresentKHR(app.queue, &present_info);
-    CHECK(0);
+    CHECK(EMSG_PRESENT_QUEUE);
     // finish
-    return 1;
+    return EMSG_VULKAN_SUCCESS;
 }
 
 void skd_draw(ModelData *data) {
     const VkCommandBuffer command = app.framedata.command_buffer;
     if (data != NULL) {
-        vkCmdPushConstants(
-            command,
-            app.pipeline_layout,
-            VK_SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(ModelData),
-            data
-        );
+        vkCmdPushConstants(command, app.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelData), data);
     }
     vkCmdDrawIndexed(command, app.resource.square.index_cnt, 1, 0, 0, 0);
 }

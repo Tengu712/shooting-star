@@ -1,5 +1,13 @@
 #include "private.h"
 
+#ifdef RELEASE_BUILD
+#define INST_LAYER_NAMES_CNT 0
+#define INST_LAYER_NAMES { }
+#else
+#define INST_LAYER_NAMES_CNT 1
+#define INST_LAYER_NAMES { "VK_LAYER_KHRONOS_validation\0" }
+#endif
+
 extern char shader_vert_data[];
 extern int32_t shader_vert_size;
 extern char shader_frag_data[];
@@ -7,10 +15,7 @@ extern int32_t shader_frag_size;
 
 VulkanApp app;
 
-vkres_t skd_init_vulkan(
-    SkdWindowParam *window_param,
-    uint32_t max_image_texture_num
-) {
+vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
     VkResult res;
     // NOTE: considering empty image
     const uint32_t max_image_texture_num_add_1 = max_image_texture_num + 1;
@@ -20,31 +25,19 @@ vkres_t skd_init_vulkan(
 
     // instance
     uint32_t inst_ext_props_cnt = 0;
-    res = vkEnumerateInstanceExtensionProperties(
-        NULL,
-        &inst_ext_props_cnt,
-        NULL
-    );
+    res = vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, NULL);
     CHECK(EMSG_ENUM_INST_EXT_PROPS);
     VkExtensionProperties *inst_ext_props =
-        (VkExtensionProperties*)
-        malloc(sizeof(VkExtensionProperties) * inst_ext_props_cnt);
-    res = vkEnumerateInstanceExtensionProperties(
-        NULL,
-        &inst_ext_props_cnt,
-        inst_ext_props
-    );
+        (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * inst_ext_props_cnt);
+    res = vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, inst_ext_props);
     CHECK(EMSG_ENUM_INST_EXT_PROPS);
-    const char **inst_exts =
-        (const char **)malloc(sizeof(char *) * inst_ext_props_cnt);
+    const char **inst_exts = (const char **)malloc(sizeof(char *) * inst_ext_props_cnt);
     const int32_t inst_exts_cnt = inst_ext_props_cnt;
     for (int32_t i = 0; i < inst_ext_props_cnt; ++i) {
         inst_exts[i] = inst_ext_props[i].extensionName;
     }
-    const char *inst_layer_names[1] = {
-        "VK_LAYER_KHRONOS_validation\0",
-    };
-    const int32_t inst_layer_names_cnt = 1;
+    const int32_t inst_layer_names_cnt = INST_LAYER_NAMES_CNT;
+    const char *inst_layer_names[INST_LAYER_NAMES_CNT] = INST_LAYER_NAMES;
     const VkApplicationInfo app_info = {
         VK_STRUCTURE_TYPE_APPLICATION_INFO,
         NULL,
@@ -73,32 +66,19 @@ vkres_t skd_init_vulkan(
     uint32_t phys_devices_cnt = 0;
     res = vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, NULL);
     CHECK(EMSG_ENUM_PHYS_DEVICES);
-    VkPhysicalDevice *phys_devices =
-        (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * phys_devices_cnt);
+    VkPhysicalDevice *phys_devices = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * phys_devices_cnt);
     res = vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, phys_devices);
     CHECK(EMSG_ENUM_PHYS_DEVICES);
     const VkPhysicalDevice phys_device = phys_devices[0];
-    vkGetPhysicalDeviceMemoryProperties(
-        phys_device,
-        &app.phys_device_memory_prop
-    );
+    vkGetPhysicalDeviceMemoryProperties(phys_device, &app.phys_device_memory_prop);
     free(phys_devices);
 
     // queue family index
     uint32_t queue_family_props_cnt = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        phys_device,
-        &queue_family_props_cnt,
-        NULL
-    );
+    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_props_cnt, NULL);
     VkQueueFamilyProperties *queue_family_props =
-        (VkQueueFamilyProperties *)
-        malloc(sizeof(VkQueueFamilyProperties) * queue_family_props_cnt);
-    vkGetPhysicalDeviceQueueFamilyProperties(
-        phys_device,
-        &queue_family_props_cnt,
-        queue_family_props
-    );
+        (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queue_family_props_cnt);
+    vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_props_cnt, queue_family_props);
     int32_t queue_family_index = -1;
     for (int32_t i = 0; i < queue_family_props_cnt; ++i) {
         if ((queue_family_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) > 0) {
@@ -113,32 +93,22 @@ vkres_t skd_init_vulkan(
 
     // device
     uint32_t device_ext_props_cnt = 0;
-    res = vkEnumerateDeviceExtensionProperties(
-        phys_device,
-        NULL,
-        &device_ext_props_cnt,
-        NULL
-    );
+    res = vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, NULL);
     CHECK(EMSG_ENUM_DEVICE_EXT_PROPS);
     VkExtensionProperties *device_ext_props =
-        (VkExtensionProperties*)
-        malloc(sizeof(VkExtensionProperties) * device_ext_props_cnt);
-    res = vkEnumerateDeviceExtensionProperties(
-        phys_device,
-        NULL,
-        &device_ext_props_cnt,
-        device_ext_props
-    );
+        (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * device_ext_props_cnt);
+    res = vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, device_ext_props);
     CHECK(EMSG_ENUM_DEVICE_EXT_PROPS);
-    const char **device_exts =
-        (const char**)malloc(sizeof(char*) * device_ext_props_cnt);
+    const char **device_exts = (const char**)malloc(sizeof(char*) * device_ext_props_cnt);
     int32_t device_exts_cnt = 0;
     for (int32_t i = 0; i < device_ext_props_cnt; ++i) {
         const int32_t cmpres = strcmp(
             device_ext_props[i].extensionName,
             "VK_EXT_buffer_device_address"
         );
-        if (cmpres == 0) continue;
+        if (cmpres == 0) {
+            continue;
+        }
         device_exts[device_exts_cnt] = device_ext_props[i].extensionName;
         device_exts_cnt += 1;
     }
@@ -190,22 +160,11 @@ vkres_t skd_init_vulkan(
 #endif
     CHECK(EMSG_CREATE_SURFACE);
     uint32_t surface_formats_cnt = 0;
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        phys_device,
-        app.surface,
-        &surface_formats_cnt,
-        NULL
-    );
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, NULL);
     CHECK(EMSG_GET_SURFACE_FORMATS);
-    VkSurfaceFormatKHR *surface_formats = 
-        (VkSurfaceFormatKHR *)
-        malloc(sizeof(VkSurfaceFormatKHR) * surface_formats_cnt);
-    res = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        phys_device,
-        app.surface,
-        &surface_formats_cnt,
-        surface_formats
-    );
+    VkSurfaceFormatKHR *surface_formats =
+        (VkSurfaceFormatKHR *)malloc(sizeof(VkSurfaceFormatKHR) * surface_formats_cnt);
+    res = vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, surface_formats);
     CHECK(EMSG_GET_SURFACE_FORMATS);
     int32_t surface_format_index = -1;
     for (int32_t i = 0; i < surface_formats_cnt; ++i) {
@@ -217,14 +176,9 @@ vkres_t skd_init_vulkan(
     if (surface_format_index == -1) {
         return EMSG_GET_SURFACE_FORMATS;
     }
-    const VkSurfaceFormatKHR surface_format =
-        surface_formats[surface_format_index];
+    const VkSurfaceFormatKHR surface_format = surface_formats[surface_format_index];
     VkSurfaceCapabilitiesKHR surface_capabilities;
-    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        phys_device,
-        app.surface,
-        &surface_capabilities
-    );
+    res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.surface, &surface_capabilities);
     CHECK(EMSG_GET_SURFACE_CAPABILITIES);
     app.width = surface_capabilities.currentExtent.width;
     app.height = surface_capabilities.currentExtent.height;
@@ -269,18 +223,11 @@ vkres_t skd_init_vulkan(
         0,
         NULL,
     };
-    res = vkCreateRenderPass(
-        app.device,
-        &render_pass_create_info,
-        NULL,
-        &app.render_pass
-    );
+    res = vkCreateRenderPass(app.device, &render_pass_create_info, NULL, &app.render_pass);
     CHECK(EMSG_CREATE_RENDER_PASS);
 
     // swapchain
-    const uint32_t min_image_count =
-        surface_capabilities.minImageCount > 2 ?
-            surface_capabilities.minImageCount : 2;
+    const uint32_t min_image_count = surface_capabilities.minImageCount > 2 ? surface_capabilities.minImageCount : 2;
     const VkSwapchainCreateInfoKHR swapchain_create_info = {
         VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         NULL,
@@ -301,12 +248,7 @@ vkres_t skd_init_vulkan(
         VK_TRUE,
         VK_NULL_HANDLE
     };
-    res = vkCreateSwapchainKHR(
-        app.device,
-        &swapchain_create_info,
-        NULL,
-        &app.swapchain
-    );
+    res = vkCreateSwapchainKHR(app.device, &swapchain_create_info, NULL, &app.swapchain);
     CHECK(EMSG_CREATE_SWAPCHAIN);
 
     // image views
@@ -360,16 +302,10 @@ vkres_t skd_init_vulkan(
         app.height,
         1,
     };
-    app.framebuffers =
-        (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.images_cnt);
+    app.framebuffers = (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.images_cnt);
     for (int32_t i = 0; i < app.images_cnt; ++i) {
         frame_buffer_create_info.pAttachments = &app.image_views[i];
-        res = vkCreateFramebuffer(
-            app.device,
-            &frame_buffer_create_info,
-            NULL,
-            &app.framebuffers[i]
-        );
+        res = vkCreateFramebuffer(app.device, &frame_buffer_create_info, NULL, &app.framebuffers[i]);
         CHECK(EMSG_CREATE_FRAMEBUFFER);
     }
 
@@ -383,14 +319,8 @@ vkres_t skd_init_vulkan(
         VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         queue_family_index,
     };
-    res = vkCreateCommandPool(
-        app.device,
-        &command_pool_create_info,
-        NULL,
-        &app.command_pool
-    );
+    res = vkCreateCommandPool(app.device, &command_pool_create_info, NULL, &app.command_pool);
     CHECK(EMSG_CREATE_COMMAND_POOL);
-
 
     // shaders
     VkShaderModuleCreateInfo shader_module_create_info = {
@@ -400,21 +330,11 @@ vkres_t skd_init_vulkan(
         shader_vert_size,
         (const uint32_t *)shader_vert_data,
     };
-    res = vkCreateShaderModule(
-        app.device,
-        &shader_module_create_info,
-        NULL,
-        &app.vert_shader
-    );
+    res = vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.vert_shader);
     CHECK(EMSG_CREATE_SHADER);
     shader_module_create_info.codeSize = shader_frag_size;
     shader_module_create_info.pCode = (const uint32_t *)shader_frag_data;
-    res = vkCreateShaderModule(
-        app.device,
-        &shader_module_create_info,
-        NULL,
-        &app.frag_shader
-    );
+    res = vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.frag_shader);
     CHECK(EMSG_CREATE_SHADER);
 
     // sampler
@@ -490,12 +410,7 @@ vkres_t skd_init_vulkan(
         2,
         descriptor_set_layout_bindings,
     };
-    res = vkCreateDescriptorSetLayout(
-        app.device,
-        &descriptor_set_layout_create_info,
-        NULL,
-        &app.descriptor_set_layout
-    );
+    res = vkCreateDescriptorSetLayout(app.device, &descriptor_set_layout_create_info, NULL, &app.descriptor_set_layout);
     CHECK(EMSG_CREATE_DESCRIPTOR_SET_LAYOUT);
 
     // push constant range
@@ -515,12 +430,7 @@ vkres_t skd_init_vulkan(
         1,
         &push_constant_range,
     };
-    res = vkCreatePipelineLayout(
-        app.device,
-        &pipeline_layout_create_info,
-        NULL,
-        &app.pipeline_layout
-    );
+    res = vkCreatePipelineLayout(app.device, &pipeline_layout_create_info, NULL, &app.pipeline_layout);
     CHECK(EMSG_CREATE_PIPELINE_LAYOUT);
     VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
         {
@@ -575,10 +485,7 @@ vkres_t skd_init_vulkan(
         0.0f,
         1.0f,
     };
-    VkRect2D scissor = {
-        {0, 0},
-        {app.width, app.height},
-    };
+    VkRect2D scissor = { {0, 0}, {app.width, app.height} };
     VkPipelineViewportStateCreateInfo viewport_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         NULL,
@@ -660,14 +567,7 @@ vkres_t skd_init_vulkan(
         NULL,
         0,
     };
-    res = vkCreateGraphicsPipelines(
-        app.device,
-        VK_NULL_HANDLE,
-        1,
-        &pipeline_create_info,
-        NULL,
-        &app.pipeline
-    );
+    res = vkCreateGraphicsPipelines(app.device, VK_NULL_HANDLE, 1, &pipeline_create_info, NULL, &app.pipeline);
     CHECK(EMSG_CREATE_PIPELINE);
 
 // frame data
@@ -680,11 +580,7 @@ vkres_t skd_init_vulkan(
         VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         1,
     };
-    res = vkAllocateCommandBuffers(
-        app.device,
-        &command_buffer_allocate_info,
-        &app.framedata.command_buffer
-    );
+    res = vkAllocateCommandBuffers(app.device, &command_buffer_allocate_info, &app.framedata.command_buffer);
     CHECK(EMSG_ALLOCATE_COMMAND_BUFFERS);
 
     // fences
@@ -702,28 +598,17 @@ vkres_t skd_init_vulkan(
         NULL,
         0,
     };
-    res = vkCreateSemaphore(
-        app.device,
-        &semaphore_create_info,
-        NULL,
-        &app.framedata.render_semaphore
-    );
+    res = vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.render_semaphore);
     CHECK(EMSG_CREATE_SEMAPHORE);
-    res = vkCreateSemaphore(
-        app.device,
-        &semaphore_create_info,
-        NULL,
-        &app.framedata.present_semaphore
-    );
+    res = vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.present_semaphore);
     CHECK(EMSG_CREATE_SEMAPHORE);
 
 // rendering default objects
 
     // descriptor sets #1
     app.resource.max_descriptor_set_num = max_descriptor_set_num;
-    app.resource.descriptor_sets = (VkDescriptorSet *)malloc(
-        sizeof(VkDescriptorSet) * app.resource.max_descriptor_set_num
-    );
+    app.resource.descriptor_sets =
+        (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * app.resource.max_descriptor_set_num);
 
     // camera
     const CameraData default_camera_data = DEFAULT_CAMERA_DATA;
@@ -737,28 +622,16 @@ vkres_t skd_init_vulkan(
     {
         return EMSG_CREATE_CAMERA;
     }
-    if (!map_memory(
-            &app,
-            app.resource.camera.buffer_memory,
-            (void *)&default_camera_data,
-            sizeof(CameraData)))
-    {
+    if (!map_memory(&app, app.resource.camera.buffer_memory, (void *)&default_camera_data, sizeof(CameraData))) {
         return EMSG_CREATE_SQUARE;
     }
 
     // image textures
     app.resource.max_image_texture_num = max_image_texture_num_add_1;
-    app.resource.image_textures = 
-        (Image *)calloc(app.resource.max_image_texture_num, sizeof(Image));
+    app.resource.image_textures = (Image *)calloc(app.resource.max_image_texture_num, sizeof(Image));
     // empty image
     const unsigned char pixels[] = { 0xff, 0xff, 0xff, 0xff };
-    if (load_image_texture(
-            pixels,
-            1,
-            1,
-            0
-        ) != EMSG_VULKAN_SUCCESS)
-    {
+    if (load_image_texture(pixels, 1, 1, 0) != EMSG_VULKAN_SUCCESS) {
         return EMSG_CREATE_EMPTY_IMAGE;
     }
 
@@ -771,11 +644,7 @@ vkres_t skd_init_vulkan(
             1,
             &app.descriptor_set_layout,
         };
-        res = vkAllocateDescriptorSets(
-            app.device,
-            &descriptor_set_allocate_info,
-            &app.resource.descriptor_sets[i]
-        );
+        res = vkAllocateDescriptorSets(app.device, &descriptor_set_allocate_info, &app.resource.descriptor_sets[i]);
         CHECK(EMSG_CREATE_DESCRIPTOR_SET);
         VkDescriptorBufferInfo camera_descriptor_buffer_info = {
             app.resource.camera.buffer,
@@ -813,13 +682,7 @@ vkres_t skd_init_vulkan(
                 NULL,
             },
         };
-        vkUpdateDescriptorSets(
-            app.device,
-            2,
-            write_descriptor_sets,
-            0,
-            NULL
-        );
+        vkUpdateDescriptorSets(app.device, 2, write_descriptor_sets, 0, NULL);
     }
 
     // square
@@ -851,20 +714,10 @@ vkres_t skd_init_vulkan(
     {
         return EMSG_CREATE_SQUARE;
     }
-    if (!map_memory(
-            &app,
-            app.resource.square.vertex_buffer_memory,
-            (void *)vtxs,
-            sizeof(float) * 5 * 4))
-    {
+    if (!map_memory(&app, app.resource.square.vertex_buffer_memory, (void *)vtxs, sizeof(float) * 5 * 4)) {
         return EMSG_CREATE_SQUARE;
     }
-    if (!map_memory(
-            &app,
-            app.resource.square.index_buffer_memory,
-            (void *)idxs,
-            sizeof(uint32_t) * 6))
-    {
+    if (!map_memory(&app, app.resource.square.index_buffer_memory, (void *)idxs, sizeof(uint32_t) * 6)) {
         return EMSG_CREATE_SQUARE;
     }
 
@@ -878,12 +731,7 @@ void skd_terminate_vulkan(void) {
     vkDestroySemaphore(app.device, app.framedata.present_semaphore, NULL);
     vkDestroySemaphore(app.device, app.framedata.render_semaphore, NULL);
     vkDestroyFence(app.device, app.framedata.fence, NULL);
-    vkFreeCommandBuffers(
-        app.device,
-        app.command_pool,
-        1,
-        &app.framedata.command_buffer
-    );
+    vkFreeCommandBuffers(app.device, app.command_pool, 1, &app.framedata.command_buffer);
     // rendering default objects
     for (int32_t i = 1; i < app.resource.max_image_texture_num; ++i) {
         skd_unload_image(i);

@@ -1,15 +1,11 @@
+#include "private.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-#include "private.h"
 
 extern VulkanApp app;
 
-vkres_t load_image_texture(
-    const unsigned char *pixels,
-    int32_t width,
-    int32_t height,
-    int32_t id
-) {
+vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t height, int32_t id) {
     VkResult res;
     const VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     const int32_t size = width * height * 4;
@@ -58,11 +54,7 @@ vkres_t load_image_texture(
         reqs.size,
         0,
     };
-    allocate_info.memoryTypeIndex = get_memory_type_index(
-        &app,
-        reqs,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-    );
+    allocate_info.memoryTypeIndex = get_memory_type_index(&app, reqs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     res = vkAllocateMemory(app.device, &allocate_info, NULL, &out->memory);
     CHECK(EMSG_LOAD_IMAGE);
     res = vkBindImageMemory(app.device, out->image, out->memory, 0);
@@ -123,14 +115,7 @@ vkres_t load_image_texture(
         1,
         &image_memory_barrier
     );
-    vkCmdCopyBufferToImage(
-        command,
-        staging_buffer,
-        out->image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1,
-        &copy_region
-    );
+    vkCmdCopyBufferToImage(command, staging_buffer, out->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
     image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     image_memory_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -189,12 +174,7 @@ vkres_t load_image_texture(
     return EMSG_VULKAN_SUCCESS;
 }
 
-vkres_t skd_load_image_from_memory(
-    const unsigned char *pixels,
-    int32_t width,
-    int32_t height,
-    uint32_t *out_id
-) {
+vkres_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
     if (out_id == NULL) {
         return EMSG_NULL_OUT_IMAGE_TEXTURE_ID;
     }
@@ -231,13 +211,7 @@ vkres_t skd_load_image_from_memory(
         NULL,
         NULL,
     };
-    vkUpdateDescriptorSets(
-        app.device,
-        1,
-        &write_descriptor_set,
-        0,
-        NULL
-    );
+    vkUpdateDescriptorSets(app.device, 1, &write_descriptor_set, 0, NULL);
     // finish
     *out_id = id;
     return EMSG_VULKAN_SUCCESS;
@@ -260,9 +234,7 @@ vkres_t skd_load_image_from_file(const char *path, uint32_t *out_id) {
 }
 
 void skd_unload_image(uint32_t id) {
-    if (id >= app.resource.max_image_texture_num
-        || app.resource.image_textures[id].view == NULL)
-    {
+    if (id >= app.resource.max_image_texture_num || app.resource.image_textures[id].view == NULL) {
         return;
     }
     vkDeviceWaitIdle(app.device);
@@ -284,13 +256,7 @@ void skd_unload_image(uint32_t id) {
         NULL,
         NULL,
     };
-    vkUpdateDescriptorSets(
-        app.device,
-        1,
-        &write_descriptor_set,
-        0,
-        NULL
-    );
+    vkUpdateDescriptorSets(app.device, 1, &write_descriptor_set, 0, NULL);
     // unload
     vkDestroyImageView(app.device, app.resource.image_textures[id].view, NULL);
     vkDestroyImage(app.device, app.resource.image_textures[id].image, NULL);

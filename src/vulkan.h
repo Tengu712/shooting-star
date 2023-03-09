@@ -4,9 +4,9 @@
 
 #include <stdint.h>
 
-// ========================================================================= //
-//         Error Messages                                                    //
-// ========================================================================= //
+// ================================================================================================================= //
+//         Error Messages                                                                                            //
+// ================================================================================================================= //
 
 typedef enum EMSG_VULKAN {
     EMSG_VULKAN_SUCCESS = 0,
@@ -40,6 +40,12 @@ typedef enum EMSG_VULKAN {
     EMSG_CREATE_CAMERA,
     EMSG_CREATE_EMPTY_IMAGE,
     // rendering
+    EMSG_ACQUIRE_NEXT_IMAGE,
+    EMSG_WAIT_FOR_FENCE,
+    EMSG_RESET_FENCE,
+    EMSG_BEGIN_COMMAND_BUFFER,
+    EMSG_SUBMIT_QUEUE,
+    EMSG_PRESENT_QUEUE,
     // image
     EMSG_NULL_OUT_IMAGE_TEXTURE_ID,
     EMSG_IMAGE_OUT_OF_INDEX,
@@ -111,6 +117,18 @@ inline static const char *skd_get_vulkan_error_message(vkres_t res) {
         case EMSG_CREATE_EMPTY_IMAGE:
             return "creating empty image";
         // rendering
+        case EMSG_ACQUIRE_NEXT_IMAGE:
+            return "getting index of next image";
+        case EMSG_WAIT_FOR_FENCE:
+            return "waiting for a fence";
+        case EMSG_RESET_FENCE:
+            return "resetting a fence";
+        case EMSG_BEGIN_COMMAND_BUFFER:
+            return "beginning to record commands";
+        case EMSG_SUBMIT_QUEUE:
+            return "submitting queue";
+        case EMSG_PRESENT_QUEUE:
+            return "pushing present command to queue";
         // image
         case EMSG_NULL_OUT_IMAGE_TEXTURE_ID:
             return "trying to store image to null image texture id";
@@ -134,9 +152,9 @@ inline static const char *skd_get_vulkan_error_message(vkres_t res) {
     }
 }
 
-// ========================================================================= //
-//         Structs                                                           //
-// ========================================================================= //
+// ================================================================================================================= //
+//         Structs                                                                                                   //
+// ================================================================================================================= //
 
 typedef struct Vec3_t {
     float x;
@@ -211,52 +229,41 @@ typedef struct CameraData_t {
         { 45.0f, 1.0f, 0.0f, 1.0f }, \
     }
 
-// ========================================================================= //
-//         General                                                           //
-// ========================================================================= //
+// ================================================================================================================= //
+//         General                                                                                                   //
+// ================================================================================================================= //
 
 // A function to initialize Vulkan.
-vkres_t skd_init_vulkan(
-    SkdWindowParam *window_param,
-    uint32_t max_image_num
-);
+vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_num);
 
 // A terminator function.
 void skd_terminate_vulkan(void);
 
-// ========================================================================= //
-//         Rendering                                                         //
-// ========================================================================= //
+// ================================================================================================================= //
+//         Rendering                                                                                                 //
+// ================================================================================================================= //
 
 // A function to aquire next image id and wait for a fence.
-// It returns 1 if it succeeded.
-int32_t skd_prepare_rendering(uint32_t *p_id);
+vkres_t skd_prepare_rendering(uint32_t *p_id);
 
 // A function to begin to render.
 // To save processing image id, passed first parameter.
-// It returns 1 if it succeeded.
-int32_t skd_begin_render(uint32_t id, float r, float g, float b);
+vkres_t skd_begin_render(uint32_t id, float r, float g, float b);
 
 // A function to end to render.
-// It returns 1 if it succeeded.
-int32_t skd_end_render(uint32_t id);
+vkres_t skd_end_render(uint32_t id);
 
 // A function to draw.
 void skd_draw(ModelData *data);
 
-// ========================================================================= //
-//         Image                                                             //
-// ========================================================================= //
+// ================================================================================================================= //
+//         Image                                                                                                     //
+// ================================================================================================================= //
 
 // A function to load an image from memory.
 // The number of channel of the image must be 4 (RGBA).
 // It set texture id to `out` parameter.
-vkres_t skd_load_image_from_memory(
-    const unsigned char *pixels,
-    int32_t width,
-    int32_t height,
-    uint32_t *out_id
-);
+vkres_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id);
 
 // A function to load an image from file.
 // The number of channel of the image must be 4 (RGBA).
@@ -266,9 +273,9 @@ vkres_t skd_load_image_from_file(const char *path, uint32_t *out_id);
 // A function to unload an image.
 void skd_unload_image(uint32_t id);
 
-// ========================================================================= //
-//         Descriptor Sets                                                   //
-// ========================================================================= //
+// ================================================================================================================= //
+//         Descriptor Sets                                                                                           //
+// ================================================================================================================= //
 
 // A function to update camera.
 // It overwrites camera uniform buffer data,

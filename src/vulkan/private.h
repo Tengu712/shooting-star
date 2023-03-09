@@ -78,16 +78,9 @@ typedef struct VulkanApp_t {
 
 // A function to get a memory type index that's available and bitted at flags.
 // It returns -1 if it fails.
-inline static int32_t get_memory_type_index(
-    VulkanApp *app,
-    VkMemoryRequirements reqs,
-    VkMemoryPropertyFlags flags
-) {
+inline static int32_t get_memory_type_index(VulkanApp *app, VkMemoryRequirements reqs, VkMemoryPropertyFlags flags) {
     for (int32_t i = 0; i < app->phys_device_memory_prop.memoryTypeCount; ++i) {
-        if ((reqs.memoryTypeBits & (1 << i))
-            && (app->phys_device_memory_prop.memoryTypes[i].propertyFlags
-                & flags))
-        {
+        if ((reqs.memoryTypeBits & (1 << i)) && (app->phys_device_memory_prop.memoryTypes[i].propertyFlags & flags)) {
             return i;
         }
     }
@@ -139,21 +132,9 @@ inline static int32_t create_buffer(
 
 // A function to map data into memory.
 // It returns 0 if it fails.
-inline static int32_t map_memory(
-    VulkanApp *app,
-    VkDeviceMemory device_memory,
-    void *data,
-    int32_t size
-) {
+inline static int32_t map_memory(VulkanApp *app, VkDeviceMemory device_memory, void *data, int32_t size) {
     void *p;
-    VkResult res = vkMapMemory(
-        app->device,
-        device_memory,
-        0,
-        VK_WHOLE_SIZE,
-        0,
-        &p
-    );
+    VkResult res = vkMapMemory(app->device, device_memory, 0, VK_WHOLE_SIZE, 0, &p);
     CHECK(0);
     memcpy(p, data, size);
     vkUnmapMemory(app->device, device_memory);
@@ -162,9 +143,4 @@ inline static int32_t map_memory(
 
 // A function to load image texture into app.resource.image_textures[id].
 // WARN: it overwrites data at `id` and doesn't update descriptor set.
-vkres_t load_image_texture(
-    const unsigned char *pixels,
-    int32_t width,
-    int32_t height,
-    int32_t id
-);
+vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t height, int32_t id);
