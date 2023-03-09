@@ -2,7 +2,7 @@
 
 extern VulkanApp app;
 
-int skd_prepare_rendering(unsigned int *p_id) {
+int32_t skd_prepare_rendering(uint32_t *p_id) {
     VkResult res;
     // get aquire image index
     uint32_t next_image_idx;
@@ -34,7 +34,7 @@ int skd_prepare_rendering(unsigned int *p_id) {
     return 1;
 }
 
-int skd_begin_render(unsigned int id, float r, float g, float b) {
+int32_t skd_begin_render(uint32_t id, float r, float g, float b) {
     VkResult res;
     // begin command buffer
     const VkCommandBuffer command = app.framedata.command_buffer;
@@ -47,7 +47,7 @@ int skd_begin_render(unsigned int id, float r, float g, float b) {
     res = vkBeginCommandBuffer(command, &command_buffer_begin_info);
     CHECK(0);
     // begin render pass
-    const VkClearValue clear_value = { r, g, b, 0.0f };
+    const VkClearValue clear_value = {{{ r, g, b, 0.0f }}};
     const VkExtent2D extent = { app.width, app.height };
     const VkRenderPassBeginInfo render_pass_begin_info = {
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -89,7 +89,7 @@ int skd_begin_render(unsigned int id, float r, float g, float b) {
     return 1;
 }
 
-int skd_end_render(unsigned int id) {
+int32_t skd_end_render(uint32_t id) {
     VkResult res;
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkFence fence = app.framedata.fence;

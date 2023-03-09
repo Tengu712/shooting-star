@@ -66,11 +66,11 @@ typedef struct VulkanApp_t {
     } framedata;
     struct Resource_t {
         // it's the same as max_image_texture_num
-        unsigned int max_descriptor_set_num;
+        uint32_t max_descriptor_set_num;
         VkDescriptorSet *descriptor_sets;
         Camera camera;
         // it's guaranteed to be greater than 1
-        unsigned int max_image_texture_num;
+        uint32_t max_image_texture_num;
         Image *image_textures;
         Model square;
     } resource;
@@ -78,12 +78,12 @@ typedef struct VulkanApp_t {
 
 // A function to get a memory type index that's available and bitted at flags.
 // It returns -1 if it fails.
-inline static int get_memory_type_index(
+inline static int32_t get_memory_type_index(
     VulkanApp *app,
     VkMemoryRequirements reqs,
     VkMemoryPropertyFlags flags
 ) {
-    for (int i = 0; i < app->phys_device_memory_prop.memoryTypeCount; ++i) {
+    for (int32_t i = 0; i < app->phys_device_memory_prop.memoryTypeCount; ++i) {
         if ((reqs.memoryTypeBits & (1 << i))
             && (app->phys_device_memory_prop.memoryTypes[i].propertyFlags
                 & flags))
@@ -96,7 +96,7 @@ inline static int get_memory_type_index(
 
 // A function to create a buffer.
 // It returns 0 if it fails.
-inline static int create_buffer(
+inline static int32_t create_buffer(
     VulkanApp *app,
     VkDeviceSize size,
     VkBufferUsageFlags usage,
@@ -139,11 +139,11 @@ inline static int create_buffer(
 
 // A function to map data into memory.
 // It returns 0 if it fails.
-inline static int map_memory(
+inline static int32_t map_memory(
     VulkanApp *app,
     VkDeviceMemory device_memory,
     void *data,
-    int size
+    int32_t size
 ) {
     void *p;
     VkResult res = vkMapMemory(
@@ -164,7 +164,7 @@ inline static int map_memory(
 // WARN: it overwrites data at `id` and doesn't update descriptor set.
 vkres_t load_image_texture(
     const unsigned char *pixels,
-    int width,
-    int height,
-    int id
+    int32_t width,
+    int32_t height,
+    int32_t id
 );

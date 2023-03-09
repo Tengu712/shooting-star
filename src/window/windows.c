@@ -6,7 +6,7 @@
 static HINSTANCE g_hinst;
 static HWND g_hwnd;
 
-static LRESULT WINAPI WindowProcedure(HWND hwnd, unsigned int msg, WPARAM wparam, LPARAM lparam) {
+static LRESULT WINAPI WindowProcedure(HWND hwnd, uint32_t msg, WPARAM wparam, LPARAM lparam) {
     switch (msg) {
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -21,7 +21,7 @@ void skd_create_window_param(SkdWindowParam *out) {
     out->data.winapi_window.hwnd = (void *)g_hwnd;
 }
 
-wndres_t skd_create_window(const char *title, unsigned short width, unsigned short height) {
+wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
     // instance handle
     g_hinst = GetModuleHandle(NULL);
     // window class
@@ -47,7 +47,6 @@ wndres_t skd_create_window(const char *title, unsigned short width, unsigned sho
     RECT rect = { 0, 0, (long)width, (long)height };
     AdjustWindowRectEx(&rect, style, 0, 0);
     // window
-    const size_t titlelen = _mbstrlen(title);
     wchar_t wtitle[256] = {};
     if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) {
         return EMSG_CONVERT_WTITLE;
@@ -75,7 +74,7 @@ wndres_t skd_create_window(const char *title, unsigned short width, unsigned sho
     return 0;
 }
 
-int skd_do_window_events(void) {
+int32_t skd_do_window_events(void) {
     MSG msg;
     while (1) {
         if (PeekMessageW(&msg, NULL, 0U, 0U, PM_REMOVE)) {

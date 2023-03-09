@@ -2,6 +2,8 @@
 
 #include "common_window_vulkan.h"
 
+#include <stdint.h>
+
 // ================================================================================================================= //
 //         Error Messages                                                                                            //
 // ================================================================================================================= //
@@ -19,7 +21,7 @@ typedef enum EMSG_WINDOW {
     EMSG_CONVERT_WTITLE,
 } wndres_t;
 
-inline static const char *skd_get_window_error_message(int res) {
+inline static const char *skd_get_window_error_message(int32_t res) {
     switch (res) {
         // linux
         case EMSG_CONNECT_X:
@@ -50,11 +52,11 @@ inline static const char *skd_get_window_error_message(int res) {
 void skd_create_window_param(SkdWindowParam *out);
 
 // A function to create a window.
-wndres_t skd_create_window(const char *title, unsigned short width, unsigned short height);
+wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height);
 
 // A function to do all queued window events.
 // It returns 1 if program should be closed.
-int skd_do_window_events(void);
+int32_t skd_do_window_events(void);
 
 // A terminator function.
 void skd_terminate_window(void);

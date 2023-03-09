@@ -14,7 +14,7 @@ vkres_t skd_update_camera(CameraData *cameradata) {
     return EMSG_VULKAN_SUCCESS;
 }
 
-vkres_t skd_use_image_texture(unsigned int id) {
+vkres_t skd_use_image_texture(uint32_t id) {
     if (id >= app.resource.max_image_texture_num) {
         return EMSG_USE_IMAGE_TEXTURE_OUT_OF_INDEX;
     }

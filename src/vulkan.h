@@ -2,6 +2,8 @@
 
 #include "common_window_vulkan.h"
 
+#include <stdint.h>
+
 // ========================================================================= //
 //         Error Messages                                                    //
 // ========================================================================= //
@@ -216,7 +218,7 @@ typedef struct CameraData_t {
 // A function to initialize Vulkan.
 vkres_t skd_init_vulkan(
     SkdWindowParam *window_param,
-    unsigned int max_image_num
+    uint32_t max_image_num
 );
 
 // A terminator function.
@@ -228,16 +230,16 @@ void skd_terminate_vulkan(void);
 
 // A function to aquire next image id and wait for a fence.
 // It returns 1 if it succeeded.
-int skd_prepare_rendering(unsigned int *p_id);
+int32_t skd_prepare_rendering(uint32_t *p_id);
 
 // A function to begin to render.
 // To save processing image id, passed first parameter.
 // It returns 1 if it succeeded.
-int skd_begin_render(unsigned int id, float r, float g, float b);
+int32_t skd_begin_render(uint32_t id, float r, float g, float b);
 
 // A function to end to render.
 // It returns 1 if it succeeded.
-int skd_end_render(unsigned int id);
+int32_t skd_end_render(uint32_t id);
 
 // A function to draw.
 void skd_draw(ModelData *data);
@@ -251,18 +253,18 @@ void skd_draw(ModelData *data);
 // It set texture id to `out` parameter.
 vkres_t skd_load_image_from_memory(
     const unsigned char *pixels,
-    int width,
-    int height,
-    unsigned int *out_id
+    int32_t width,
+    int32_t height,
+    uint32_t *out_id
 );
 
 // A function to load an image from file.
 // The number of channel of the image must be 4 (RGBA).
 // It set texture id to `out` parameter.
-vkres_t skd_load_image_from_file(const char *path, unsigned int *out_id);
+vkres_t skd_load_image_from_file(const char *path, uint32_t *out_id);
 
 // A function to unload an image.
-void skd_unload_image(unsigned int id);
+void skd_unload_image(uint32_t id);
 
 // ========================================================================= //
 //         Descriptor Sets                                                   //
@@ -274,4 +276,4 @@ void skd_unload_image(unsigned int id);
 vkres_t skd_update_camera(CameraData *cameradata);
 
 // A function to use image texture.
-vkres_t skd_use_image_texture(unsigned int id);
+vkres_t skd_use_image_texture(uint32_t id);

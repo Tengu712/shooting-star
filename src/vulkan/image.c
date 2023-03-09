@@ -6,13 +6,13 @@ extern VulkanApp app;
 
 vkres_t load_image_texture(
     const unsigned char *pixels,
-    int width,
-    int height,
-    int id
+    int32_t width,
+    int32_t height,
+    int32_t id
 ) {
     VkResult res;
     const VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-    const int size = width * height * 4;
+    const int32_t size = width * height * 4;
     Image *out = &app.resource.image_textures[id];
     // staging buffer
     VkBuffer staging_buffer;
@@ -191,14 +191,14 @@ vkres_t load_image_texture(
 
 vkres_t skd_load_image_from_memory(
     const unsigned char *pixels,
-    int width,
-    int height,
-    unsigned int *out_id
+    int32_t width,
+    int32_t height,
+    uint32_t *out_id
 ) {
     if (out_id == NULL) {
         return EMSG_NULL_OUT_IMAGE_TEXTURE_ID;
     }
-    int id;
+    int32_t id;
     for (id = 0; id < app.resource.max_image_texture_num; ++id) {
         if (app.resource.image_textures[id].image == NULL) {
             break;
@@ -243,10 +243,10 @@ vkres_t skd_load_image_from_memory(
     return EMSG_VULKAN_SUCCESS;
 }
 
-vkres_t skd_load_image_from_file(const char *path, unsigned int *out_id) {
-    int width = 0;
-    int height = 0;
-    int channel_cnt = 0;
+vkres_t skd_load_image_from_file(const char *path, uint32_t *out_id) {
+    int32_t width = 0;
+    int32_t height = 0;
+    int32_t channel_cnt = 0;
     unsigned char *pixels = stbi_load(path, &width, &height, &channel_cnt, 0);
     if (pixels == NULL) {
         return EMSG_LOAD_IMAGE_FILE;
@@ -259,7 +259,7 @@ vkres_t skd_load_image_from_file(const char *path, unsigned int *out_id) {
     return res;
 }
 
-void skd_unload_image(unsigned int id) {
+void skd_unload_image(uint32_t id) {
     if (id >= app.resource.max_image_texture_num
         || app.resource.image_textures[id].view == NULL)
     {

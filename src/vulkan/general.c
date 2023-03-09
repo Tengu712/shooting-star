@@ -1,25 +1,25 @@
 #include "private.h"
 
 extern char shader_vert_data[];
-extern int shader_vert_size;
+extern int32_t shader_vert_size;
 extern char shader_frag_data[];
-extern int shader_frag_size;
+extern int32_t shader_frag_size;
 
 VulkanApp app;
 
 vkres_t skd_init_vulkan(
     SkdWindowParam *window_param,
-    unsigned int max_image_texture_num
+    uint32_t max_image_texture_num
 ) {
     VkResult res;
     // NOTE: considering empty image
-    const unsigned int max_image_texture_num_add_1 = max_image_texture_num + 1;
+    const uint32_t max_image_texture_num_add_1 = max_image_texture_num + 1;
     // NOTE: as for Fireball the num of descriptor sets
     // NOTE: is the same as that of image texture.
-    const unsigned int max_descriptor_set_num = max_image_texture_num_add_1;
+    const uint32_t max_descriptor_set_num = max_image_texture_num_add_1;
 
     // instance
-    int inst_ext_props_cnt = 0;
+    uint32_t inst_ext_props_cnt = 0;
     res = vkEnumerateInstanceExtensionProperties(
         NULL,
         &inst_ext_props_cnt,
@@ -37,14 +37,14 @@ vkres_t skd_init_vulkan(
     CHECK(EMSG_ENUM_INST_EXT_PROPS);
     const char **inst_exts =
         (const char **)malloc(sizeof(char *) * inst_ext_props_cnt);
-    const int inst_exts_cnt = inst_ext_props_cnt;
-    for (int i = 0; i < inst_ext_props_cnt; ++i) {
+    const int32_t inst_exts_cnt = inst_ext_props_cnt;
+    for (int32_t i = 0; i < inst_ext_props_cnt; ++i) {
         inst_exts[i] = inst_ext_props[i].extensionName;
     }
     const char *inst_layer_names[1] = {
         "VK_LAYER_KHRONOS_validation\0",
     };
-    const int inst_layer_names_cnt = 1;
+    const int32_t inst_layer_names_cnt = 1;
     const VkApplicationInfo app_info = {
         VK_STRUCTURE_TYPE_APPLICATION_INFO,
         NULL,
@@ -70,7 +70,7 @@ vkres_t skd_init_vulkan(
     free(inst_ext_props);
 
     // physical device
-    int phys_devices_cnt = 0;
+    uint32_t phys_devices_cnt = 0;
     res = vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, NULL);
     CHECK(EMSG_ENUM_PHYS_DEVICES);
     VkPhysicalDevice *phys_devices =
@@ -85,7 +85,7 @@ vkres_t skd_init_vulkan(
     free(phys_devices);
 
     // queue family index
-    int queue_family_props_cnt = 0;
+    uint32_t queue_family_props_cnt = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(
         phys_device,
         &queue_family_props_cnt,
@@ -99,8 +99,8 @@ vkres_t skd_init_vulkan(
         &queue_family_props_cnt,
         queue_family_props
     );
-    int queue_family_index = -1;
-    for (int i = 0; i < queue_family_props_cnt; ++i) {
+    int32_t queue_family_index = -1;
+    for (int32_t i = 0; i < queue_family_props_cnt; ++i) {
         if ((queue_family_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) > 0) {
             queue_family_index = i;
             break;
@@ -112,7 +112,7 @@ vkres_t skd_init_vulkan(
     free(queue_family_props);
 
     // device
-    int device_ext_props_cnt = 0;
+    uint32_t device_ext_props_cnt = 0;
     res = vkEnumerateDeviceExtensionProperties(
         phys_device,
         NULL,
@@ -132,9 +132,9 @@ vkres_t skd_init_vulkan(
     CHECK(EMSG_ENUM_DEVICE_EXT_PROPS);
     const char **device_exts =
         (const char**)malloc(sizeof(char*) * device_ext_props_cnt);
-    int device_exts_cnt = 0;
-    for (int i = 0; i < device_ext_props_cnt; ++i) {
-        const int cmpres = strcmp(
+    int32_t device_exts_cnt = 0;
+    for (int32_t i = 0; i < device_ext_props_cnt; ++i) {
+        const int32_t cmpres = strcmp(
             device_ext_props[i].extensionName,
             "VK_EXT_buffer_device_address"
         );
@@ -207,8 +207,8 @@ vkres_t skd_init_vulkan(
         surface_formats
     );
     CHECK(EMSG_GET_SURFACE_FORMATS);
-    int surface_format_index = -1;
-    for (int i = 0; i < surface_formats_cnt; ++i) {
+    int32_t surface_format_index = -1;
+    for (int32_t i = 0; i < surface_formats_cnt; ++i) {
         if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
             surface_format_index = i;
             break;
@@ -316,7 +316,7 @@ vkres_t skd_init_vulkan(
     res = vkGetSwapchainImagesKHR(app.device, app.swapchain, &app.images_cnt, images);
     CHECK(EMSG_GET_IMAGES);
     app.image_views = (VkImageView *)malloc(sizeof(VkImageView) * app.images_cnt);
-    for (int i = 0; i < app.images_cnt; ++i) {
+    for (int32_t i = 0; i < app.images_cnt; ++i) {
         VkImageViewCreateInfo image_view_create_info = {
             VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             NULL,
@@ -362,7 +362,7 @@ vkres_t skd_init_vulkan(
     };
     app.framebuffers =
         (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.images_cnt);
-    for (int i = 0; i < app.images_cnt; ++i) {
+    for (int32_t i = 0; i < app.images_cnt; ++i) {
         frame_buffer_create_info.pAttachments = &app.image_views[i];
         res = vkCreateFramebuffer(
             app.device,
@@ -752,7 +752,6 @@ vkres_t skd_init_vulkan(
         (Image *)calloc(app.resource.max_image_texture_num, sizeof(Image));
     // empty image
     const unsigned char pixels[] = { 0xff, 0xff, 0xff, 0xff };
-    int dummy_texture_id = 0;
     if (load_image_texture(
             pixels,
             1,
@@ -764,7 +763,7 @@ vkres_t skd_init_vulkan(
     }
 
     // descriptor sets #2
-    for (int i = 0; i < app.resource.max_descriptor_set_num; ++i) {
+    for (int32_t i = 0; i < app.resource.max_descriptor_set_num; ++i) {
         VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
             VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
             NULL,
@@ -886,7 +885,7 @@ void skd_terminate_vulkan(void) {
         &app.framedata.command_buffer
     );
     // rendering default objects
-    for (int i = 1; i < app.resource.max_image_texture_num; ++i) {
+    for (int32_t i = 1; i < app.resource.max_image_texture_num; ++i) {
         skd_unload_image(i);
     }
     skd_unload_image(0);
@@ -905,10 +904,10 @@ void skd_terminate_vulkan(void) {
     vkDestroyShaderModule(app.device, app.vert_shader, NULL);
     vkDestroyShaderModule(app.device, app.frag_shader, NULL);
     vkDestroyCommandPool(app.device, app.command_pool, NULL);
-    for (int i = 0; i < app.images_cnt; ++i) {
+    for (int32_t i = 0; i < app.images_cnt; ++i) {
         vkDestroyFramebuffer(app.device, app.framebuffers[i], NULL);
     }
-    for (int i = 0; i < app.images_cnt; ++i) {
+    for (int32_t i = 0; i < app.images_cnt; ++i) {
         vkDestroyImageView(app.device, app.image_views[i], NULL);
     }
     free(app.framebuffers);

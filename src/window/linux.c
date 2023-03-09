@@ -29,7 +29,7 @@ void skd_create_window_param(SkdWindowParam *out) {
     out->data.xcb_window.window = g_window;
 }
 
-wndres_t skd_create_window(const char *title, unsigned short width, unsigned short height) {
+wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
@@ -83,10 +83,10 @@ wndres_t skd_create_window(const char *title, unsigned short width, unsigned sho
     XSizeHints size_hints;
     memset(&size_hints, 0, sizeof(XSizeHints));
     size_hints.flags = (1 << 4) | (1 << 5);
-    size_hints.max_width = (int)width;
-    size_hints.min_width = (int)width;
-    size_hints.max_height = (int)height;
-    size_hints.min_height = (int)height;
+    size_hints.max_width = (int32_t)width;
+    size_hints.min_width = (int32_t)width;
+    size_hints.max_height = (int32_t)height;
+    size_hints.min_height = (int32_t)height;
     res = xcb_change_property(
         g_connection,
         XCB_PROP_MODE_REPLACE,
@@ -121,7 +121,7 @@ wndres_t skd_create_window(const char *title, unsigned short width, unsigned sho
     return EMSG_WINDOW_SUCCESS;
 }
 
-int skd_do_window_events(void) {
+int32_t skd_do_window_events(void) {
     while (1) {
         xcb_generic_event_t* event = xcb_poll_for_event(g_connection);
         if (event == NULL) {
