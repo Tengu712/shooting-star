@@ -2,16 +2,11 @@
 
 #include <windows.h>
 #include <stdlib.h>
-#include <stdio.h>
 
-#define EMSG_REGISTER_WNDCLASS 1
-#define EMSG_CONVERT_WTITLE 2
-#define EMSG_CREATE_WINDOW 3
+static HINSTANCE g_hinst;
+static HWND g_hwnd;
 
-HINSTANCE g_hinst;
-HWND g_hwnd;
-
-LRESULT WINAPI WindowProcedure(HWND hwnd, unsigned int msg, WPARAM wparam, LPARAM lparam) {
+static LRESULT WINAPI WindowProcedure(HWND hwnd, unsigned int msg, WPARAM wparam, LPARAM lparam) {
     switch (msg) {
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -26,23 +21,12 @@ void skd_create_window_param(SkdWindowParam *out) {
     out->data.winapi_window.hwnd = (void *)g_hwnd;
 }
 
-const char *skd_get_window_error_message(int res) {
-    switch (res) {
-        case EMSG_REGISTER_WNDCLASS:
-            return "failed to register window class";
-        case EMSG_CREATE_WINDOW:
-            return "failed to create a window";
-        default:
-            return "unexpected";
-    }
-}
-
-int skd_create_window(const char *title, unsigned short width, unsigned short height) {
+wndres_t skd_create_window(const char *title, unsigned short width, unsigned short height) {
     // instance handle
     g_hinst = GetModuleHandle(NULL);
     // window class
     const DWORD style = WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX;
-    WNDCLASSEXW wc = {
+    const WNDCLASSEXW wc = {
         sizeof(WNDCLASSEXW),
         CS_CLASSDC,
         WindowProcedure,

@@ -19,7 +19,7 @@ ifeq ($(OS),Windows_NT)
 endif
 
 linux:		$(fireball_dependencies) tmp/window/linux.o
-	gcc -o fireball \
+	gcc -Wall -o fireball \
 	  tmp/main.o \
 	  tmp/window/linux.o \
 	  tmp/vulkan/general.o \
@@ -32,36 +32,36 @@ linux:		$(fireball_dependencies) tmp/window/linux.o
 	  -lxcb \
 	  -lvulkan
 windows:	$(fireball_dependencies) tmp/window/windows.o
-	gcc -o fireball.exe \
+	gcc -Wall -o fireball.exe \
 	  $(fireball_dependencies) \
 	  tmp/window/windows.o \
 	  -lvulkan-1
 
 tmp/main.o:		src/common_window_vulkan.h src/window.h src/vulkan.h src/main.c
-	gcc -c -o tmp/main.o src/main.c
+	gcc -Wall -c -o tmp/main.o src/main.c
 
 tmp/window/linux.o:		$(window_dependencies) src/window/linux.c
-	gcc -c -o tmp/window/linux.o src/window/linux.c
+	gcc -Wall -c -o tmp/window/linux.o src/window/linux.c
 tmp/window/windows.o:	$(window_dependencies) src/window/windows.c
-	gcc -c -o tmp/window/windows.o src/window/windows.c
+	gcc -Wall -c -o tmp/window/windows.o src/window/windows.c
 
 tmp/vulkan/general.o:			$(vulkan_dependencies) src/vulkan/general.c
-	gcc -c -o tmp/vulkan/general.o src/vulkan/general.c
+	gcc -Wall -c -o tmp/vulkan/general.o src/vulkan/general.c
 tmp/vulkan/rendering.o:			$(vulkan_dependencies) src/vulkan/rendering.c
-	gcc -c -o tmp/vulkan/rendering.o src/vulkan/rendering.c
+	gcc -Wall -c -o tmp/vulkan/rendering.o src/vulkan/rendering.c
 tmp/vulkan/image.o:				$(vulkan_dependencies) src/vulkan/image.c
-	gcc -c -o tmp/vulkan/image.o src/vulkan/image.c
+	gcc -Wall -c -o tmp/vulkan/image.o src/vulkan/image.c
 tmp/vulkan/descriptor_sets.o:	$(vulkan_dependencies) src/vulkan/descriptor_sets.c
-	gcc -c -o tmp/vulkan/descriptor_sets.o src/vulkan/descriptor_sets.c
+	gcc -Wall -c -o tmp/vulkan/descriptor_sets.o src/vulkan/descriptor_sets.c
 
 tmp/shader.vert.o:	$(bin2c) src/shader.vert
 	glslc src/shader.vert -o tmp/shader.vert.spv
 	./bin2c/bin2c tmp/shader.vert.spv tmp/shader.vert.c shader_vert
-	gcc -c -o tmp/shader.vert.o tmp/shader.vert.c
+	gcc -Wall -c -o tmp/shader.vert.o tmp/shader.vert.c
 tmp/shader.frag.o:	$(bin2c) src/shader.frag
 	glslc src/shader.frag -o tmp/shader.frag.spv
 	./bin2c/bin2c tmp/shader.frag.spv tmp/shader.frag.c shader_frag
-	gcc -c -o tmp/shader.frag.o tmp/shader.frag.c
+	gcc -Wall -c -o tmp/shader.frag.o tmp/shader.frag.c
 
 $(bin2c):	bin2c/bin2c.rs
 	rustc -o bin2c/bin2c bin2c/bin2c.rs

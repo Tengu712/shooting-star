@@ -5,11 +5,6 @@
 #include <string.h>
 
 #define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) return (p);
-#define EMSG_CONNECT_X 1
-#define EMSG_GET_SETUP 2
-#define EMSG_GET_SCREEN 3
-#define EMSG_CREATE_WINDOW 4
-#define EMSG_CHANGE_PROPERTY 5
 
 typedef struct {
     uint32_t flags;
@@ -24,9 +19,9 @@ typedef struct {
     uint32_t win_gravity;
 } XSizeHints;
 
-xcb_connection_t *g_connection;
-xcb_window_t g_window;
-xcb_intern_atom_reply_t *g_atom_delete_window;
+static xcb_connection_t *g_connection;
+static xcb_window_t g_window;
+static xcb_intern_atom_reply_t *g_atom_delete_window;
 
 void skd_create_window_param(SkdWindowParam *out) {
     out->kind = SKD_WIN_KIND_XCB;
@@ -34,24 +29,7 @@ void skd_create_window_param(SkdWindowParam *out) {
     out->data.xcb_window.window = g_window;
 }
 
-const char *skd_get_window_error_message(int res) {
-    switch (res) {
-        case EMSG_CONNECT_X:
-            return "failed to connect with X server";
-        case EMSG_GET_SETUP:
-            return "failed to get a setup";
-        case EMSG_GET_SCREEN:
-            return "failed to get a screen";
-        case EMSG_CREATE_WINDOW:
-            return "failed to create a window";
-        case EMSG_CHANGE_PROPERTY:
-            return "failed to change window property";
-        default:
-            return "unexpected";
-    }
-}
-
-int skd_create_window(const char *title, unsigned short width, unsigned short height) {
+wndres_t skd_create_window(const char *title, unsigned short width, unsigned short height) {
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
@@ -121,14 +99,10 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
     );
     CHECK(EMSG_CHANGE_PROPERTY);
     // event
-    xcb_intern_atom_cookie_t cookie_protocols =
-        xcb_intern_atom(g_connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *atom_protocols =
-        xcb_intern_atom_reply(g_connection, cookie_protocols, 0);
-    xcb_intern_atom_cookie_t cookie_delete_window =
-        xcb_intern_atom(g_connection, 0, 16, "WM_DELETE_WINDOW");
-    g_atom_delete_window =
-        xcb_intern_atom_reply(g_connection, cookie_delete_window, 0);
+    xcb_intern_atom_cookie_t cookie_protocols = xcb_intern_atom(g_connection, 1, 12, "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t *atom_protocols = xcb_intern_atom_reply(g_connection, cookie_protocols, 0);
+    xcb_intern_atom_cookie_t cookie_delete_window = xcb_intern_atom(g_connection, 0, 16, "WM_DELETE_WINDOW");
+    g_atom_delete_window = xcb_intern_atom_reply(g_connection, cookie_delete_window, 0);
     res = xcb_change_property(
         g_connection,
         XCB_PROP_MODE_REPLACE,
@@ -144,7 +118,7 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
     // finish
     xcb_map_window(g_connection, g_window);
     xcb_flush(g_connection);
-    return 0;
+    return EMSG_WINDOW_SUCCESS;
 }
 
 int skd_do_window_events(void) {
@@ -156,8 +130,7 @@ int skd_do_window_events(void) {
         }
         uint8_t response = event->response_type & ~0x80;
         if (response == XCB_CLIENT_MESSAGE) {
-            xcb_client_message_event_t *cme =
-                (xcb_client_message_event_t *)event;
+            xcb_client_message_event_t *cme = (xcb_client_message_event_t *)event;
             if (cme->data.data32[0] == g_atom_delete_window->atom) {
                 free(event);
                 return 1;
