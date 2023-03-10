@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CHECK(p) if (res != 0) return (p);
+#define CHECK(p, f) if ((f) != 0) return (p);
 
 // A struct for model buffer.
 typedef struct Model_t {
@@ -97,7 +97,6 @@ inline static int32_t create_buffer(
     VkBuffer *p_buffer,
     VkDeviceMemory *p_device_memory
 ) {
-    VkResult res;
     VkBufferCreateInfo buffer_create_info = {
         VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         NULL,
@@ -107,8 +106,7 @@ inline static int32_t create_buffer(
         VK_SHARING_MODE_EXCLUSIVE,
         0,
     };
-    res = vkCreateBuffer(app->device, &buffer_create_info, NULL, p_buffer);
-    CHECK(0);
+    CHECK(0, vkCreateBuffer(app->device, &buffer_create_info, NULL, p_buffer));
     VkMemoryRequirements reqs;
     vkGetBufferMemoryRequirements(app->device, *p_buffer, &reqs);
     VkMemoryAllocateInfo allocate_info = {
@@ -118,15 +116,16 @@ inline static int32_t create_buffer(
         0,
     };
     allocate_info.memoryTypeIndex = get_memory_type_index(app, reqs, flags);
-    res = vkAllocateMemory(
-        app->device,
-        &allocate_info,
-        NULL,
-        p_device_memory
+    CHECK(
+        0,
+        vkAllocateMemory(
+            app->device,
+            &allocate_info,
+            NULL,
+            p_device_memory
+        )
     );
-    CHECK(0);
-    res = vkBindBufferMemory(app->device, *p_buffer, *p_device_memory, 0);
-    CHECK(0);
+    CHECK(0, vkBindBufferMemory(app->device, *p_buffer, *p_device_memory, 0));
     return 1;
 }
 
@@ -134,8 +133,7 @@ inline static int32_t create_buffer(
 // It returns 0 if it fails.
 inline static int32_t map_memory(VulkanApp *app, VkDeviceMemory device_memory, void *data, int32_t size) {
     void *p;
-    VkResult res = vkMapMemory(app->device, device_memory, 0, VK_WHOLE_SIZE, 0, &p);
-    CHECK(0);
+    CHECK(0, vkMapMemory(app->device, device_memory, 0, VK_WHOLE_SIZE, 0, &p));
     memcpy(p, data, size);
     vkUnmapMemory(app->device, device_memory);
     return 1;

@@ -6,7 +6,6 @@
 extern VulkanApp app;
 
 vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t height, int32_t id) {
-    VkResult res;
     const VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     const int32_t size = width * height * 4;
     Image *out = &app.resource.image_textures[id];
@@ -44,8 +43,7 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         NULL,
         VK_IMAGE_LAYOUT_UNDEFINED,
     };
-    res = vkCreateImage(app.device, &image_create_info, NULL, &out->image);
-    CHECK(EMSG_LOAD_IMAGE);
+    CHECK(EMSG_LOAD_IMAGE, vkCreateImage(app.device, &image_create_info, NULL, &out->image));
     VkMemoryRequirements reqs;
     vkGetImageMemoryRequirements(app.device, out->image, &reqs);
     VkMemoryAllocateInfo allocate_info = {
@@ -55,10 +53,8 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         0,
     };
     allocate_info.memoryTypeIndex = get_memory_type_index(&app, reqs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    res = vkAllocateMemory(app.device, &allocate_info, NULL, &out->memory);
-    CHECK(EMSG_LOAD_IMAGE);
-    res = vkBindImageMemory(app.device, out->image, out->memory, 0);
-    CHECK(EMSG_LOAD_IMAGE);
+    CHECK(EMSG_LOAD_IMAGE, vkAllocateMemory(app.device, &allocate_info, NULL, &out->memory));
+    CHECK(EMSG_LOAD_IMAGE, vkBindImageMemory(app.device, out->image, out->memory, 0));
     // begin copy command
     VkBufferImageCopy copy_region = {
         0,
@@ -76,20 +72,21 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         1,
     };
     VkCommandBuffer command;
-    res = vkAllocateCommandBuffers(
-        app.device,
-        &command_buffer_allocate_info,
-        &command
+    CHECK(
+        EMSG_LOAD_IMAGE,
+        vkAllocateCommandBuffers(
+            app.device,
+            &command_buffer_allocate_info,
+            &command
+        )
     );
-    CHECK(EMSG_LOAD_IMAGE);
     VkCommandBufferBeginInfo command_buffer_begin_info = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         NULL,
         0,
         NULL,
     };
-    res = vkBeginCommandBuffer(command, &command_buffer_begin_info);
-    CHECK(EMSG_LOAD_IMAGE);
+    CHECK(EMSG_LOAD_IMAGE, vkBeginCommandBuffer(command, &command_buffer_begin_info));
     // copy buffer to image
     VkImageMemoryBarrier image_memory_barrier = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -146,8 +143,7 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         0,
         NULL,
     };
-    res = vkQueueSubmit(app.queue, 1, &submit_info, VK_NULL_HANDLE);
-    CHECK(EMSG_LOAD_IMAGE);
+    CHECK(EMSG_LOAD_IMAGE, vkQueueSubmit(app.queue, 1, &submit_info, VK_NULL_HANDLE));
     VkImageViewCreateInfo image_view_create_info = {
         VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         NULL,
@@ -163,11 +159,9 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         },
         { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
     };
-    res = vkCreateImageView(app.device, &image_view_create_info, NULL, &out->view);
-    CHECK(EMSG_LOAD_IMAGE);
+    CHECK(EMSG_LOAD_IMAGE, vkCreateImageView(app.device, &image_view_create_info, NULL, &out->view));
     // finish
-    res = vkDeviceWaitIdle(app.device);
-    CHECK(EMSG_LOAD_IMAGE);
+    CHECK(EMSG_LOAD_IMAGE, vkDeviceWaitIdle(app.device));
     vkFreeCommandBuffers(app.device, app.command_pool, 1, &command);
     vkFreeMemory(app.device, staging_buffer_memory, NULL);
     vkDestroyBuffer(app.device, staging_buffer, NULL);

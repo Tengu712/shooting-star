@@ -3,25 +3,24 @@
 extern VulkanApp app;
 
 vkres_t skd_prepare_rendering(uint32_t *p_id) {
-    VkResult res;
     // get aquire image index
     uint32_t next_image_idx;
-    res = vkAcquireNextImageKHR(
-        app.device,
-        app.swapchain,
-        UINT64_MAX,
-        app.framedata.present_semaphore,
-        VK_NULL_HANDLE,
-        &next_image_idx
+    CHECK(
+        EMSG_ACQUIRE_NEXT_IMAGE,
+        vkAcquireNextImageKHR(
+            app.device,
+            app.swapchain,
+            UINT64_MAX,
+            app.framedata.present_semaphore,
+            VK_NULL_HANDLE,
+            &next_image_idx
+        )
     );
-    CHECK(EMSG_ACQUIRE_NEXT_IMAGE);
     // wait for a fence
     const VkFence fence = app.framedata.fence;
-    res = vkWaitForFences(app.device, 1, &fence, VK_TRUE, UINT64_MAX);
-    CHECK(EMSG_WAIT_FOR_FENCE);
+    CHECK(EMSG_WAIT_FOR_FENCE, vkWaitForFences(app.device, 1, &fence, VK_TRUE, UINT64_MAX));
     // reset fences
-    res = vkResetFences(app.device, 1, &fence);
-    CHECK(EMSG_RESET_FENCE);
+    CHECK(EMSG_RESET_FENCE, vkResetFences(app.device, 1, &fence));
     // TODO: reset command buffer?
     // finish
     *p_id = next_image_idx;
@@ -29,7 +28,6 @@ vkres_t skd_prepare_rendering(uint32_t *p_id) {
 }
 
 vkres_t skd_begin_render(uint32_t id, float r, float g, float b) {
-    VkResult res;
     // begin command buffer
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkCommandBufferBeginInfo command_buffer_begin_info = {
@@ -38,8 +36,7 @@ vkres_t skd_begin_render(uint32_t id, float r, float g, float b) {
         0,
         NULL,
     };
-    res = vkBeginCommandBuffer(command, &command_buffer_begin_info);
-    CHECK(EMSG_BEGIN_COMMAND_BUFFER);
+    CHECK(EMSG_BEGIN_COMMAND_BUFFER, vkBeginCommandBuffer(command, &command_buffer_begin_info));
     // begin render pass
     const VkClearValue clear_value = {{{ r, g, b, 0.0f }}};
     const VkExtent2D extent = { app.width, app.height };
@@ -75,7 +72,6 @@ vkres_t skd_begin_render(uint32_t id, float r, float g, float b) {
 }
 
 vkres_t skd_end_render(uint32_t id) {
-    VkResult res;
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkFence fence = app.framedata.fence;
     // end
@@ -94,9 +90,9 @@ vkres_t skd_end_render(uint32_t id) {
         1,
         &app.framedata.render_semaphore,
     };
-    res = vkQueueSubmit(app.queue, 1, &submit_info, fence);
-    CHECK(EMSG_SUBMIT_QUEUE);
+    CHECK(EMSG_SUBMIT_QUEUE, vkQueueSubmit(app.queue, 1, &submit_info, fence));
     // present
+    VkResult res;
     VkPresentInfoKHR present_info = {
         VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         NULL,
@@ -107,8 +103,7 @@ vkres_t skd_end_render(uint32_t id) {
         &id,
         &res,
     };
-    res = vkQueuePresentKHR(app.queue, &present_info);
-    CHECK(EMSG_PRESENT_QUEUE);
+    CHECK(EMSG_PRESENT_QUEUE, vkQueuePresentKHR(app.queue, &present_info));
     // finish
     return EMSG_VULKAN_SUCCESS;
 }
