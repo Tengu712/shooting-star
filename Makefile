@@ -4,15 +4,16 @@
 .PHONY: clean_windows
 
 fireball_dependencies = \
+    tmp/error.o \
+	tmp/main.o \
 	tmp/vulkan/general.o \
 	tmp/vulkan/rendering.o \
 	tmp/vulkan/image.o \
 	tmp/vulkan/descriptor_sets.o \
 	tmp/shader.vert.o \
-	tmp/shader.frag.o \
-	tmp/main.o
-window_dependencies = src/common_window_vulkan.h src/window.h
-vulkan_dependencies = src/common_window_vulkan.h src/vulkan.h src/vulkan/private.h
+	tmp/shader.frag.o
+window_dependencies = src/error.h src/common_window_vulkan.h src/window.h
+vulkan_dependencies = src/error.h src/common_window_vulkan.h src/vulkan.h src/vulkan/private.h
 bin2c = bin2c/bin2c
 ifeq ($(OS),Windows_NT)
 	bin2c = bin2c/bin2c.exe
@@ -20,14 +21,8 @@ endif
 
 linux:		$(fireball_dependencies) tmp/window/linux.o
 	gcc -Wall -o fireball \
-	  tmp/main.o \
+	  $(fireball_dependencies) \
 	  tmp/window/linux.o \
-	  tmp/vulkan/general.o \
-	  tmp/vulkan/rendering.o \
-	  tmp/vulkan/image.o \
-	  tmp/vulkan/descriptor_sets.o \
-	  tmp/shader.vert.o \
-	  tmp/shader.frag.o \
 	  -lm \
 	  -lxcb \
 	  -lvulkan
@@ -37,6 +32,9 @@ windows:	$(fireball_dependencies) tmp/window/windows.o
 	  tmp/window/windows.o \
 	  -lvulkan-1
 
+tmp/error.o:	src/error.h src/error.c
+	gcc -Wall -c -o tmp/error.o src/error.c
+	
 tmp/main.o:		src/common_window_vulkan.h src/window.h src/vulkan.h src/main.c
 	gcc -Wall -c -o tmp/main.o src/main.c
 
