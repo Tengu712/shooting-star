@@ -6,14 +6,10 @@
 
 warn_t init_logger(void) {
 #ifndef NOLOG
-    if (setvbuf(stdout, NULL, _IOFBF, 8388608) != 0) {
-        log_warning("failed to setvbuf() for stdout.\n");
-        return WARNING;
-    }
-    if (setvbuf(stderr, NULL, _IOFBF, 8388608) != 0) {
-        log_warning("failed to setvbuf() for stderr.\n");
-        return WARNING;
-    }
+    if (setvbuf(stdout, NULL, _IOFBF, 8388608) != 0)
+        return warning("failed to setvbuf() for stdout.\n");
+    if (setvbuf(stderr, NULL, _IOFBF, 8388608) != 0)
+        return warning("failed to setvbuf() for stderr.\n");
 #endif
     return SUCCESS;
 }
@@ -24,11 +20,12 @@ void error(const char *msg) {
     exit(1);
 }
 
-void log_warning(const char *msg) {
+warn_t warning(const char *msg) {
 #ifndef NOLOG
     fprintf(stderr, "[ WARNING ] %s\n", msg);
     fflush(stderr);
 #endif
+    return WARNING;
 }
 
 void log_info(const char *msg) {

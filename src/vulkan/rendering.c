@@ -2,11 +2,10 @@
 
 extern VulkanApp app;
 
-vkres_t skd_prepare_rendering(uint32_t *p_id) {
+warn_t skd_prepare_rendering(uint32_t *p_id) {
     // get aquire image index
     uint32_t next_image_idx;
-    CHECK(
-        EMSG_ACQUIRE_NEXT_IMAGE,
+    WARN(
         vkAcquireNextImageKHR(
             app.device,
             app.swapchain,
@@ -14,20 +13,21 @@ vkres_t skd_prepare_rendering(uint32_t *p_id) {
             app.framedata.present_semaphore,
             VK_NULL_HANDLE,
             &next_image_idx
-        )
+        ),
+        "failed to get next image index."
     );
     // wait for a fence
     const VkFence fence = app.framedata.fence;
-    CHECK(EMSG_WAIT_FOR_FENCE, vkWaitForFences(app.device, 1, &fence, VK_TRUE, UINT64_MAX));
+    if (vkWaitForFences(app.device, 1, &fence, VK_TRUE, UINT64_MAX) != 0) warning("failed to wait for fence.");
     // reset fences
-    CHECK(EMSG_RESET_FENCE, vkResetFences(app.device, 1, &fence));
+    if (vkResetFences(app.device, 1, &fence) != 0) warning("failed to reset fence.");
     // TODO: reset command buffer?
     // finish
     *p_id = next_image_idx;
-    return EMSG_VULKAN_SUCCESS;
+    return SUCCESS;
 }
 
-vkres_t skd_begin_render(uint32_t id, float r, float g, float b) {
+warn_t skd_begin_render(uint32_t id, float r, float g, float b) {
     // begin command buffer
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkCommandBufferBeginInfo command_buffer_begin_info = {
@@ -36,7 +36,7 @@ vkres_t skd_begin_render(uint32_t id, float r, float g, float b) {
         0,
         NULL,
     };
-    CHECK(EMSG_BEGIN_COMMAND_BUFFER, vkBeginCommandBuffer(command, &command_buffer_begin_info));
+    WARN(vkBeginCommandBuffer(command, &command_buffer_begin_info), "failed to begin record commands to render.");
     // begin render pass
     const VkClearValue clear_value = {{{ r, g, b, 0.0f }}};
     const VkExtent2D extent = { app.width, app.height };
@@ -68,10 +68,10 @@ vkres_t skd_begin_render(uint32_t id, float r, float g, float b) {
     vkCmdBindVertexBuffers(command, 0, 1, &app.resource.square.vertex_buffer, &offset);
     vkCmdBindIndexBuffer(command, app.resource.square.index_buffer, offset, VK_INDEX_TYPE_UINT32);
     // finish
-    return EMSG_VULKAN_SUCCESS;
+    return SUCCESS;
 }
 
-vkres_t skd_end_render(uint32_t id) {
+warn_t skd_end_render(uint32_t id) {
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkFence fence = app.framedata.fence;
     // end
@@ -90,7 +90,7 @@ vkres_t skd_end_render(uint32_t id) {
         1,
         &app.framedata.render_semaphore,
     };
-    CHECK(EMSG_SUBMIT_QUEUE, vkQueueSubmit(app.queue, 1, &submit_info, fence));
+    WARN(vkQueueSubmit(app.queue, 1, &submit_info, fence), "failed to submit queue to render.");
     // present
     VkResult res;
     VkPresentInfoKHR present_info = {
@@ -103,9 +103,9 @@ vkres_t skd_end_render(uint32_t id) {
         &id,
         &res,
     };
-    CHECK(EMSG_PRESENT_QUEUE, vkQueuePresentKHR(app.queue, &present_info));
+    WARN(vkQueuePresentKHR(app.queue, &present_info), "failed to enqueue present command.");
     // finish
-    return EMSG_VULKAN_SUCCESS;
+    return SUCCESS;
 }
 
 void skd_draw(ModelData *data) {

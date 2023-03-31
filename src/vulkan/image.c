@@ -5,25 +5,25 @@
 
 extern VulkanApp app;
 
-vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t height, int32_t id) {
+warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t height, int32_t id) {
     const VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     const int32_t size = width * height * 4;
     Image *out = &app.resource.image_textures[id];
     // staging buffer
     VkBuffer staging_buffer;
     VkDeviceMemory staging_buffer_memory;
-    if (!create_buffer(
+    if (create_buffer(
             &app,
             (VkDeviceSize)size,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             &staging_buffer,
-            &staging_buffer_memory))
+            &staging_buffer_memory) != SUCCESS)
     {
-        return EMSG_LOAD_IMAGE;
+        return warning("failed to create buffer for image texture.");
     }
     if (!map_memory(&app, staging_buffer_memory, (void *)pixels, size)) {
-        return EMSG_LOAD_IMAGE;
+        return warning("failed to map image texture.");
     }
     // image
     VkImageCreateInfo image_create_info = {
@@ -43,7 +43,7 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         NULL,
         VK_IMAGE_LAYOUT_UNDEFINED,
     };
-    CHECK(EMSG_LOAD_IMAGE, vkCreateImage(app.device, &image_create_info, NULL, &out->image));
+    WARN(vkCreateImage(app.device, &image_create_info, NULL, &out->image), "failed to create image for image texture.");
     VkMemoryRequirements reqs;
     vkGetImageMemoryRequirements(app.device, out->image, &reqs);
     VkMemoryAllocateInfo allocate_info = {
@@ -53,8 +53,8 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         0,
     };
     allocate_info.memoryTypeIndex = get_memory_type_index(&app, reqs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    CHECK(EMSG_LOAD_IMAGE, vkAllocateMemory(app.device, &allocate_info, NULL, &out->memory));
-    CHECK(EMSG_LOAD_IMAGE, vkBindImageMemory(app.device, out->image, out->memory, 0));
+    WARN(vkAllocateMemory(app.device, &allocate_info, NULL, &out->memory), "failed to allocate memory for image texture.");
+    WARN(vkBindImageMemory(app.device, out->image, out->memory, 0), "failed to bind image memory for image texture.");
     // begin copy command
     VkBufferImageCopy copy_region = {
         0,
@@ -72,21 +72,14 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         1,
     };
     VkCommandBuffer command;
-    CHECK(
-        EMSG_LOAD_IMAGE,
-        vkAllocateCommandBuffers(
-            app.device,
-            &command_buffer_allocate_info,
-            &command
-        )
-    );
+    WARN(vkAllocateCommandBuffers(app.device, &command_buffer_allocate_info, &command), "failed to allocate command buffers to create image texture.");
     VkCommandBufferBeginInfo command_buffer_begin_info = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         NULL,
         0,
         NULL,
     };
-    CHECK(EMSG_LOAD_IMAGE, vkBeginCommandBuffer(command, &command_buffer_begin_info));
+    WARN(vkBeginCommandBuffer(command, &command_buffer_begin_info), "failed to begin to record commands to create image texture.");
     // copy buffer to image
     VkImageMemoryBarrier image_memory_barrier = {
         VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -143,7 +136,7 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         0,
         NULL,
     };
-    CHECK(EMSG_LOAD_IMAGE, vkQueueSubmit(app.queue, 1, &submit_info, VK_NULL_HANDLE));
+    WARN(vkQueueSubmit(app.queue, 1, &submit_info, VK_NULL_HANDLE), "failed to submit queue to create image texture.");
     VkImageViewCreateInfo image_view_create_info = {
         VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         NULL,
@@ -159,33 +152,24 @@ vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t h
         },
         { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
     };
-    CHECK(EMSG_LOAD_IMAGE, vkCreateImageView(app.device, &image_view_create_info, NULL, &out->view));
+    WARN(vkCreateImageView(app.device, &image_view_create_info, NULL, &out->view), "failed to create image view for image texture.");
     // finish
-    CHECK(EMSG_LOAD_IMAGE, vkDeviceWaitIdle(app.device));
+    vkDeviceWaitIdle(app.device);
     vkFreeCommandBuffers(app.device, app.command_pool, 1, &command);
     vkFreeMemory(app.device, staging_buffer_memory, NULL);
     vkDestroyBuffer(app.device, staging_buffer, NULL);
-    return EMSG_VULKAN_SUCCESS;
+    return SUCCESS;
 }
 
-vkres_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
-    if (out_id == NULL) {
-        return EMSG_NULL_OUT_IMAGE_TEXTURE_ID;
-    }
+warn_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
+    if (out_id == NULL) warning("tried to output image texture id to null.");
     int32_t id;
     for (id = 0; id < app.resource.max_image_texture_num; ++id) {
-        if (app.resource.image_textures[id].image == NULL) {
-            break;
-        }
+        if (app.resource.image_textures[id].image == NULL) break;
     }
-    if (id >= app.resource.max_image_texture_num) {
-        return EMSG_IMAGE_OUT_OF_INDEX;
-    }
+    if (id >= app.resource.max_image_texture_num) warning("tried to too many image textures.");
     // load image
-    const vkres_t res = load_image_texture(pixels, width, height, id);
-    if (res != EMSG_VULKAN_SUCCESS) {
-        return res;
-    }
+    if (load_image_texture(pixels, width, height, id) != SUCCESS) return WARNING;
     // register image texture to descriptor set
     // HACK: should i move this part into descriptor_sets.c?
     VkDescriptorImageInfo sampler_descriptor_image_info = {
@@ -208,29 +192,23 @@ vkres_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, i
     vkUpdateDescriptorSets(app.device, 1, &write_descriptor_set, 0, NULL);
     // finish
     *out_id = id;
-    return EMSG_VULKAN_SUCCESS;
+    return SUCCESS;
 }
 
-vkres_t skd_load_image_from_file(const char *path, uint32_t *out_id) {
+warn_t skd_load_image_from_file(const char *path, uint32_t *out_id) {
     int32_t width = 0;
     int32_t height = 0;
     int32_t channel_cnt = 0;
     unsigned char *pixels = stbi_load(path, &width, &height, &channel_cnt, 0);
-    if (pixels == NULL) {
-        return EMSG_LOAD_IMAGE_FILE;
-    }
-    if (channel_cnt != 4) {
-        return EMSG_INVALID_IMAGE_FORMAT;
-    }
-    vkres_t res = skd_load_image_from_memory(pixels, width, height, out_id);
+    if (pixels == NULL) warning("failed to load image file."); // TODO: log file name
+    if (channel_cnt != 4) warning("tried to create image texture from invalid color format image file."); // TODO: log file name
+    const warn_t res = skd_load_image_from_memory(pixels, width, height, out_id);
     stbi_image_free((void *)pixels);
     return res;
 }
 
 void skd_unload_image(uint32_t id) {
-    if (id >= app.resource.max_image_texture_num || app.resource.image_textures[id].view == NULL) {
-        return;
-    }
+    if (id >= app.resource.max_image_texture_num || app.resource.image_textures[id].view == NULL) return;
     vkDeviceWaitIdle(app.device);
     // detach from descriptor set
     VkDescriptorImageInfo sampler_descriptor_image_info = {

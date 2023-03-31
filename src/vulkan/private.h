@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../error.h"
 #include "../vulkan.h"
 
 #ifdef __linux__
@@ -11,7 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CHECK(p, f) if ((f) != 0) return (p);
+#define CHECK(f, msg) if ((f) != 0) error((msg));
+#define WARN(f, msg) if ((f) != 0) return warning((msg));
 
 // A struct for model buffer.
 typedef struct Model_t {
@@ -88,8 +90,7 @@ inline static int32_t get_memory_type_index(VulkanApp *app, VkMemoryRequirements
 }
 
 // A function to create a buffer.
-// It returns 0 if it fails.
-inline static int32_t create_buffer(
+inline static warn_t create_buffer(
     VulkanApp *app,
     VkDeviceSize size,
     VkBufferUsageFlags usage,
@@ -106,7 +107,7 @@ inline static int32_t create_buffer(
         VK_SHARING_MODE_EXCLUSIVE,
         0,
     };
-    CHECK(0, vkCreateBuffer(app->device, &buffer_create_info, NULL, p_buffer));
+    WARN(vkCreateBuffer(app->device, &buffer_create_info, NULL, p_buffer), "");
     VkMemoryRequirements reqs;
     vkGetBufferMemoryRequirements(app->device, *p_buffer, &reqs);
     VkMemoryAllocateInfo allocate_info = {
@@ -116,24 +117,15 @@ inline static int32_t create_buffer(
         0,
     };
     allocate_info.memoryTypeIndex = get_memory_type_index(app, reqs, flags);
-    CHECK(
-        0,
-        vkAllocateMemory(
-            app->device,
-            &allocate_info,
-            NULL,
-            p_device_memory
-        )
-    );
-    CHECK(0, vkBindBufferMemory(app->device, *p_buffer, *p_device_memory, 0));
+    WARN(vkAllocateMemory(app->device, &allocate_info, NULL, p_device_memory), "");
+    WARN(vkBindBufferMemory(app->device, *p_buffer, *p_device_memory, 0), "");
     return 1;
 }
 
 // A function to map data into memory.
-// It returns 0 if it fails.
-inline static int32_t map_memory(VulkanApp *app, VkDeviceMemory device_memory, void *data, int32_t size) {
+inline static warn_t map_memory(VulkanApp *app, VkDeviceMemory device_memory, void *data, int32_t size) {
     void *p;
-    CHECK(0, vkMapMemory(app->device, device_memory, 0, VK_WHOLE_SIZE, 0, &p));
+    WARN(vkMapMemory(app->device, device_memory, 0, VK_WHOLE_SIZE, 0, &p), "");
     memcpy(p, data, size);
     vkUnmapMemory(app->device, device_memory);
     return 1;
@@ -141,4 +133,4 @@ inline static int32_t map_memory(VulkanApp *app, VkDeviceMemory device_memory, v
 
 // A function to load image texture into app.resource.image_textures[id].
 // WARN: it overwrites data at `id` and doesn't update descriptor set.
-vkres_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t height, int32_t id);
+warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t height, int32_t id);

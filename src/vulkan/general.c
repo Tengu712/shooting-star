@@ -15,7 +15,10 @@ extern int32_t shader_frag_size;
 
 VulkanApp app;
 
-vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
+warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
+    log_info("start initialize Vulkan ...");
+
+    warn_t res = SUCCESS;
     // NOTE: considering empty image
     const uint32_t max_image_texture_num_add_1 = max_image_texture_num + 1;
     // NOTE: as for Fireball the num of descriptor sets
@@ -24,10 +27,9 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
 
     // instance
     uint32_t inst_ext_props_cnt = 0;
-    CHECK(EMSG_ENUM_INST_EXT_PROPS, vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, NULL));
-    VkExtensionProperties *inst_ext_props =
-        (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * inst_ext_props_cnt);
-    CHECK(EMSG_ENUM_INST_EXT_PROPS, vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, inst_ext_props));
+    CHECK(vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, NULL), "failed to get the number of instance extension properties.");
+    VkExtensionProperties *inst_ext_props = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * inst_ext_props_cnt);
+    CHECK(vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, inst_ext_props), "failed to enumerate instance extension properties.");
     const char **inst_exts = (const char **)malloc(sizeof(char *) * inst_ext_props_cnt);
     const int32_t inst_exts_cnt = inst_ext_props_cnt;
     for (int32_t i = 0; i < inst_ext_props_cnt; ++i) {
@@ -54,15 +56,15 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         inst_exts_cnt,
         inst_exts,
     };
-    CHECK(EMSG_CREATE_INST, vkCreateInstance(&create_info, NULL, &app.instance));
+    CHECK(vkCreateInstance(&create_info, NULL, &app.instance), "failed to create instance.");
     free((char **)inst_exts);
     free(inst_ext_props);
 
     // physical device
     uint32_t phys_devices_cnt = 0;
-    CHECK(EMSG_ENUM_PHYS_DEVICES, vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, NULL));
+    CHECK(vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, NULL), "failed to get the number of physical devices.");
     VkPhysicalDevice *phys_devices = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * phys_devices_cnt);
-    CHECK(EMSG_ENUM_PHYS_DEVICES, vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, phys_devices));
+    CHECK(vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, phys_devices), "failed to enumerate physical devices.");
     const VkPhysicalDevice phys_device = phys_devices[0];
     vkGetPhysicalDeviceMemoryProperties(phys_device, &app.phys_device_memory_prop);
     free(phys_devices);
@@ -70,8 +72,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
     // queue family index
     uint32_t queue_family_props_cnt = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_props_cnt, NULL);
-    VkQueueFamilyProperties *queue_family_props =
-        (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queue_family_props_cnt);
+    VkQueueFamilyProperties *queue_family_props = (VkQueueFamilyProperties *)malloc(sizeof(VkQueueFamilyProperties) * queue_family_props_cnt);
     vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &queue_family_props_cnt, queue_family_props);
     int32_t queue_family_index = -1;
     for (int32_t i = 0; i < queue_family_props_cnt; ++i) {
@@ -80,31 +81,18 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
             break;
         }
     }
-    if (queue_family_index == -1) {
-        return EMSG_FIND_QUEUE_FAMILY_INDEX;
-    }
+    if (queue_family_index == -1) error("failed to find queue family index.");
     free(queue_family_props);
 
     // device
     uint32_t device_ext_props_cnt = 0;
-    CHECK(
-        EMSG_ENUM_DEVICE_EXT_PROPS,
-        vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, NULL)
-    );
-    VkExtensionProperties *device_ext_props =
-        (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * device_ext_props_cnt);
-    CHECK(
-        EMSG_ENUM_DEVICE_EXT_PROPS,
-        vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, device_ext_props)
-    );
+    CHECK(vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, NULL), "failed to get the number of device extension properties.");
+    VkExtensionProperties *device_ext_props = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * device_ext_props_cnt);
+    CHECK(vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, device_ext_props), "failed to enumerate device extension properties.");
     const char **device_exts = (const char**)malloc(sizeof(char*) * device_ext_props_cnt);
     int32_t device_exts_cnt = 0;
     for (int32_t i = 0; i < device_ext_props_cnt; ++i) {
-        const int32_t cmpres = strcmp(
-            device_ext_props[i].extensionName,
-            "VK_EXT_buffer_device_address"
-        );
-        if (cmpres == 0) {
+        if (strcmp(device_ext_props[i].extensionName, "VK_EXT_buffer_device_address") == 0) {
             continue;
         }
         device_exts[device_exts_cnt] = device_ext_props[i].extensionName;
@@ -131,7 +119,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         device_exts,
         NULL,
     };
-    CHECK(EMSG_CREATE_DEVICE, vkCreateDevice(phys_device, &device_create_info, NULL, &app.device));
+    CHECK(vkCreateDevice(phys_device, &device_create_info, NULL, &app.device), "failed to create device.");
     free((char**)device_exts);
     free(device_ext_props);
 
@@ -144,7 +132,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         window_param->data.xcb_window.connection,
         window_param->data.xcb_window.window,
     };
-    CHECK(EMSG_CREATE_SURFACE, vkCreateXcbSurfaceKHR(app.instance, &ci, NULL, &app.surface));
+    CHECK(vkCreateXcbSurfaceKHR(app.instance, &ci, NULL, &app.surface), "failed to create xcb surface.");
 #elif _WIN32
     VkWin32SurfaceCreateInfoKHR ci = {
         VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
@@ -153,19 +141,12 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         window_param->data.winapi_window.hinst,
         window_param->data.winapi_window.hwnd,
     };
+    CHECK(vkCreateWin32SurfaceKHR(app.instance, &ci, NULL, &app.surface), "failed to create win32 surface.");
 #endif
-    CHECK(EMSG_CREATE_SURFACE, vkCreateWin32SurfaceKHR(app.instance, &ci, NULL, &app.surface));
     uint32_t surface_formats_cnt = 0;
-    CHECK(
-        EMSG_GET_SURFACE_FORMATS,
-        vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, NULL)
-    );
-    VkSurfaceFormatKHR *surface_formats =
-        (VkSurfaceFormatKHR *)malloc(sizeof(VkSurfaceFormatKHR) * surface_formats_cnt);
-    CHECK(
-        EMSG_GET_SURFACE_FORMATS,
-        vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, surface_formats)
-    );
+    CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, NULL), "failed to get the number of surface formats.");
+    VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)malloc(sizeof(VkSurfaceFormatKHR) * surface_formats_cnt);
+    CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, surface_formats), "failed to get surface formats.");
     int32_t surface_format_index = -1;
     for (int32_t i = 0; i < surface_formats_cnt; ++i) {
         if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
@@ -173,15 +154,10 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
             break;
         }
     }
-    if (surface_format_index == -1) {
-        return EMSG_GET_SURFACE_FORMATS;
-    }
+    if (surface_format_index == -1) error("failed to get surface format.");
     const VkSurfaceFormatKHR surface_format = surface_formats[surface_format_index];
     VkSurfaceCapabilitiesKHR surface_capabilities;
-    CHECK(
-        EMSG_GET_SURFACE_CAPABILITIES,
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.surface, &surface_capabilities)
-    );
+    CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.surface, &surface_capabilities), "failed to get surface capabilities.");
     app.width = surface_capabilities.currentExtent.width;
     app.height = surface_capabilities.currentExtent.height;
     free(surface_formats);
@@ -225,7 +201,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         0,
         NULL,
     };
-    CHECK(EMSG_CREATE_RENDER_PASS, vkCreateRenderPass(app.device, &render_pass_create_info, NULL, &app.render_pass));
+    CHECK(vkCreateRenderPass(app.device, &render_pass_create_info, NULL, &app.render_pass), "failed to create render pass.");
 
     // swapchain
     const uint32_t min_image_count = surface_capabilities.minImageCount > 2 ? surface_capabilities.minImageCount : 2;
@@ -249,15 +225,15 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         VK_TRUE,
         VK_NULL_HANDLE
     };
-    CHECK(EMSG_CREATE_SWAPCHAIN, vkCreateSwapchainKHR(app.device, &swapchain_create_info, NULL, &app.swapchain));
+    CHECK(vkCreateSwapchainKHR(app.device, &swapchain_create_info, NULL, &app.swapchain), "failed to create swapchain.");
 
     // image views
-    CHECK(EMSG_GET_IMAGES, vkGetSwapchainImagesKHR(app.device, app.swapchain, &app.images_cnt, NULL));
+    CHECK(vkGetSwapchainImagesKHR(app.device, app.swapchain, &app.images_cnt, NULL), "failed to get the number of swapchain images.");
     VkImage *images = (VkImage *)malloc(sizeof(VkImage) * app.images_cnt);
-    CHECK(EMSG_GET_IMAGES, vkGetSwapchainImagesKHR(app.device, app.swapchain, &app.images_cnt, images));
+    CHECK(vkGetSwapchainImagesKHR(app.device, app.swapchain, &app.images_cnt, images), "failed to get swapchain images.");
     app.image_views = (VkImageView *)malloc(sizeof(VkImageView) * app.images_cnt);
     for (int32_t i = 0; i < app.images_cnt; ++i) {
-        VkImageViewCreateInfo image_view_create_info = {
+        const VkImageViewCreateInfo image_view_create_info = {
             VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             NULL,
             0,
@@ -278,15 +254,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
                 1,
             }
         };
-        CHECK(
-            EMSG_CREATE_IMAGE_VIEW,
-            vkCreateImageView(
-                app.device,
-                &image_view_create_info,
-                NULL,
-                &app.image_views[i]
-            )
-        );
+        CHECK(vkCreateImageView(app.device, &image_view_create_info, NULL, &app.image_views[i]), "failed to create image view.");
     }
     free(images);
 
@@ -305,10 +273,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
     app.framebuffers = (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.images_cnt);
     for (int32_t i = 0; i < app.images_cnt; ++i) {
         frame_buffer_create_info.pAttachments = &app.image_views[i];
-        CHECK(
-            EMSG_CREATE_FRAMEBUFFER,
-            vkCreateFramebuffer(app.device, &frame_buffer_create_info, NULL, &app.framebuffers[i])
-        );
+        CHECK(vkCreateFramebuffer(app.device, &frame_buffer_create_info, NULL, &app.framebuffers[i]), "failed to create framebuffer.");
     }
 
     // queue
@@ -321,10 +286,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         queue_family_index,
     };
-    CHECK(
-        EMSG_CREATE_COMMAND_POOL,
-        vkCreateCommandPool(app.device, &command_pool_create_info, NULL, &app.command_pool)
-    );
+    CHECK(vkCreateCommandPool(app.device, &command_pool_create_info, NULL, &app.command_pool), "failed to create command pool.");
 
     // shaders
     VkShaderModuleCreateInfo shader_module_create_info = {
@@ -334,10 +296,10 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         shader_vert_size,
         (const uint32_t *)shader_vert_data,
     };
-    CHECK(EMSG_CREATE_SHADER, vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.vert_shader));
+    CHECK(vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.vert_shader), "failed to create vertex shader module.");
     shader_module_create_info.codeSize = shader_frag_size;
     shader_module_create_info.pCode = (const uint32_t *)shader_frag_data;
-    CHECK(EMSG_CREATE_SHADER, vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.frag_shader));
+    CHECK(vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.frag_shader), "failed to create fragment shader module.");
 
     // sampler
     VkSamplerCreateInfo sampler_create_info = {
@@ -360,7 +322,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
         0,
     };
-    CHECK(EMSG_CREATE_SAMPLER, vkCreateSampler(app.device, &sampler_create_info, NULL, &app.sampler));
+    CHECK(vkCreateSampler(app.device, &sampler_create_info, NULL, &app.sampler), "failed to create sampler.");
 
     // descriptor
     VkDescriptorPoolSize descriptor_pool_sizes[] = {
@@ -381,15 +343,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         2,
         descriptor_pool_sizes,
     };
-    CHECK(
-        EMSG_CREATE_DESCRIPTOR_POOL,
-        vkCreateDescriptorPool(
-            app.device,
-            &descriptor_pool_create_info,
-            NULL,
-            &app.descriptor_pool
-        )
-    );
+    CHECK(vkCreateDescriptorPool(app.device, &descriptor_pool_create_info, NULL, &app.descriptor_pool), "failed to create descriptor pool.");
     VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
         {
             0,
@@ -413,19 +367,14 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         2,
         descriptor_set_layout_bindings,
     };
-    CHECK(
-        EMSG_CREATE_DESCRIPTOR_SET_LAYOUT,
-        vkCreateDescriptorSetLayout(app.device, &descriptor_set_layout_create_info, NULL, &app.descriptor_set_layout)
-    );
+    CHECK(vkCreateDescriptorSetLayout(app.device, &descriptor_set_layout_create_info, NULL, &app.descriptor_set_layout), "failed to create descriptor set layout.");
 
-    // push constant range
+    // pipeline layout
     VkPushConstantRange push_constant_range = {
         VK_SHADER_STAGE_VERTEX_BIT,
         0,
         sizeof(ModelData),
     };
-
-    // pipeline
     VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         NULL,
@@ -435,10 +384,9 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         1,
         &push_constant_range,
     };
-    CHECK(
-        EMSG_CREATE_PIPELINE_LAYOUT,
-        vkCreatePipelineLayout(app.device, &pipeline_layout_create_info, NULL, &app.pipeline_layout)
-    );
+    CHECK(vkCreatePipelineLayout(app.device, &pipeline_layout_create_info, NULL, &app.pipeline_layout), "failed to create pipeline layout.");
+
+    // pipeline
     VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
         {
             VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -574,10 +522,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         NULL,
         0,
     };
-    CHECK(
-        EMSG_CREATE_PIPELINE,
-        vkCreateGraphicsPipelines(app.device, VK_NULL_HANDLE, 1, &pipeline_create_info, NULL, &app.pipeline)
-    );
+    CHECK(vkCreateGraphicsPipelines(app.device, VK_NULL_HANDLE, 1, &pipeline_create_info, NULL, &app.pipeline), "failed to create pipeline.");
 
 // frame data
 
@@ -589,18 +534,15 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         1,
     };
-    CHECK(
-        EMSG_ALLOCATE_COMMAND_BUFFERS,
-        vkAllocateCommandBuffers(app.device, &command_buffer_allocate_info, &app.framedata.command_buffer)
-    );
+    CHECK(vkAllocateCommandBuffers(app.device, &command_buffer_allocate_info, &app.framedata.command_buffer), "failed to allocate command buffers.");
 
-    // fences
+    // fence
     const VkFenceCreateInfo fence_create_info = {
         VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         NULL,
         VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    CHECK(EMSG_CREATE_FENCE, vkCreateFence(app.device, &fence_create_info, NULL, &app.framedata.fence));
+    CHECK(vkCreateFence(app.device, &fence_create_info, NULL, &app.framedata.fence), "failed to create fence.");
 
     // semaphores
     const VkSemaphoreCreateInfo semaphore_create_info = {
@@ -608,36 +550,29 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
         NULL,
         0,
     };
-    CHECK(
-        EMSG_CREATE_SEMAPHORE,
-        vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.render_semaphore)
-    );
-    CHECK(
-        EMSG_CREATE_SEMAPHORE,
-        vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.present_semaphore)
-    );
+    CHECK(vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.render_semaphore), "failed to create semaphore to wait for render completed.");
+    CHECK(vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.present_semaphore), "failed to create semaphore to wait for present completed.");
 
 // rendering default objects
 
     // descriptor sets #1
     app.resource.max_descriptor_set_num = max_descriptor_set_num;
-    app.resource.descriptor_sets =
-        (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * app.resource.max_descriptor_set_num);
+    app.resource.descriptor_sets = (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * app.resource.max_descriptor_set_num);
 
     // camera
     const CameraData default_camera_data = DEFAULT_CAMERA_DATA;
-    if (!create_buffer(
+    if (create_buffer(
             &app,
             sizeof(CameraData),
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             &app.resource.camera.buffer,
-            &app.resource.camera.buffer_memory))
+            &app.resource.camera.buffer_memory) != SUCCESS)
     {
-        return EMSG_CREATE_CAMERA;
+        error("failed to create buffer for camera.");
     }
     if (!map_memory(&app, app.resource.camera.buffer_memory, (void *)&default_camera_data, sizeof(CameraData))) {
-        return EMSG_CREATE_SQUARE;
+        res = warning("failed to map camera data.");
     }
 
     // image textures
@@ -645,9 +580,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
     app.resource.image_textures = (Image *)calloc(app.resource.max_image_texture_num, sizeof(Image));
     // empty image
     const unsigned char pixels[] = { 0xff, 0xff, 0xff, 0xff };
-    if (load_image_texture(pixels, 1, 1, 0) != EMSG_VULKAN_SUCCESS) {
-        return EMSG_CREATE_EMPTY_IMAGE;
-    }
+    if (load_image_texture(pixels, 1, 1, 0) != SUCCESS) res = WARNING;
 
     // descriptor sets #2
     for (int32_t i = 0; i < app.resource.max_descriptor_set_num; ++i) {
@@ -658,10 +591,7 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
             1,
             &app.descriptor_set_layout,
         };
-        CHECK(
-            EMSG_CREATE_DESCRIPTOR_SET,
-            vkAllocateDescriptorSets(app.device, &descriptor_set_allocate_info, &app.resource.descriptor_sets[i])
-        );
+        CHECK(vkAllocateDescriptorSets(app.device, &descriptor_set_allocate_info, &app.resource.descriptor_sets[i]), "failed to allocate descriptor sets.");
         VkDescriptorBufferInfo camera_descriptor_buffer_info = {
             app.resource.camera.buffer,
             0,
@@ -710,35 +640,35 @@ vkres_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture
     };
     uint32_t idxs[6] = { 0, 1, 2, 0, 2, 3 };
     app.resource.square.index_cnt = 6;
-    if (!create_buffer(
+    if (create_buffer(
             &app,
             sizeof(float) * 5 * 4,
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             &app.resource.square.vertex_buffer,
-            &app.resource.square.vertex_buffer_memory))
+            &app.resource.square.vertex_buffer_memory) != SUCCESS)
     {
-        return EMSG_CREATE_SQUARE;
+        error("failed to create vertex buffer.");
     }
-    if (!create_buffer(
+    if (create_buffer(
             &app,
             sizeof(uint32_t) * 6,
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             &app.resource.square.index_buffer,
-            &app.resource.square.index_buffer_memory))
+            &app.resource.square.index_buffer_memory) != SUCCESS)
     {
-        return EMSG_CREATE_SQUARE;
+        error("failed to create index buffer.");
     }
     if (!map_memory(&app, app.resource.square.vertex_buffer_memory, (void *)vtxs, sizeof(float) * 5 * 4)) {
-        return EMSG_CREATE_SQUARE;
+        res = warning("failed to map vertex buffer.");
     }
     if (!map_memory(&app, app.resource.square.index_buffer_memory, (void *)idxs, sizeof(uint32_t) * 6)) {
-        return EMSG_CREATE_SQUARE;
+        res = warning("failed to map index buffer.");
     }
 
     // finish
-    return EMSG_VULKAN_SUCCESS;
+    return res;
 }
 
 void skd_terminate_vulkan(void) {
