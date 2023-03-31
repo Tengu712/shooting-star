@@ -43,9 +43,9 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
         NULL,
         VK_IMAGE_LAYOUT_UNDEFINED,
     };
-    WARN(vkCreateImage(app.device, &image_create_info, NULL, &out->image), "failed to create image for image texture.");
+    WARN(vkCreateImage(app.core.device, &image_create_info, NULL, &out->image), "failed to create image for image texture.");
     VkMemoryRequirements reqs;
-    vkGetImageMemoryRequirements(app.device, out->image, &reqs);
+    vkGetImageMemoryRequirements(app.core.device, out->image, &reqs);
     VkMemoryAllocateInfo allocate_info = {
         VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         NULL,
@@ -53,8 +53,8 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
         0,
     };
     allocate_info.memoryTypeIndex = get_memory_type_index(&app, reqs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    WARN(vkAllocateMemory(app.device, &allocate_info, NULL, &out->memory), "failed to allocate memory for image texture.");
-    WARN(vkBindImageMemory(app.device, out->image, out->memory, 0), "failed to bind image memory for image texture.");
+    WARN(vkAllocateMemory(app.core.device, &allocate_info, NULL, &out->memory), "failed to allocate memory for image texture.");
+    WARN(vkBindImageMemory(app.core.device, out->image, out->memory, 0), "failed to bind image memory for image texture.");
     // begin copy command
     VkBufferImageCopy copy_region = {
         0,
@@ -67,12 +67,12 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
     VkCommandBufferAllocateInfo command_buffer_allocate_info = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         NULL,
-        app.command_pool,
+        app.rendering.command_pool,
         VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         1,
     };
     VkCommandBuffer command;
-    WARN(vkAllocateCommandBuffers(app.device, &command_buffer_allocate_info, &command), "failed to allocate command buffers to create image texture.");
+    WARN(vkAllocateCommandBuffers(app.core.device, &command_buffer_allocate_info, &command), "failed to allocate command buffers to create image texture.");
     VkCommandBufferBeginInfo command_buffer_begin_info = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         NULL,
@@ -136,7 +136,7 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
         0,
         NULL,
     };
-    WARN(vkQueueSubmit(app.queue, 1, &submit_info, VK_NULL_HANDLE), "failed to submit queue to create image texture.");
+    WARN(vkQueueSubmit(app.rendering.queue, 1, &submit_info, VK_NULL_HANDLE), "failed to submit queue to create image texture.");
     VkImageViewCreateInfo image_view_create_info = {
         VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         NULL,
@@ -152,12 +152,12 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
         },
         { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
     };
-    WARN(vkCreateImageView(app.device, &image_view_create_info, NULL, &out->view), "failed to create image view for image texture.");
+    WARN(vkCreateImageView(app.core.device, &image_view_create_info, NULL, &out->view), "failed to create image view for image texture.");
     // finish
-    vkDeviceWaitIdle(app.device);
-    vkFreeCommandBuffers(app.device, app.command_pool, 1, &command);
-    vkFreeMemory(app.device, staging_buffer_memory, NULL);
-    vkDestroyBuffer(app.device, staging_buffer, NULL);
+    vkDeviceWaitIdle(app.core.device);
+    vkFreeCommandBuffers(app.core.device, app.rendering.command_pool, 1, &command);
+    vkFreeMemory(app.core.device, staging_buffer_memory, NULL);
+    vkDestroyBuffer(app.core.device, staging_buffer, NULL);
     return SUCCESS;
 }
 
@@ -173,7 +173,7 @@ warn_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, in
     // register image texture to descriptor set
     // HACK: should i move this part into descriptor_sets.c?
     VkDescriptorImageInfo sampler_descriptor_image_info = {
-        app.sampler,
+        app.pipeline.sampler,
         app.resource.image_textures[id].view,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     };
@@ -189,7 +189,7 @@ warn_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, in
         NULL,
         NULL,
     };
-    vkUpdateDescriptorSets(app.device, 1, &write_descriptor_set, 0, NULL);
+    vkUpdateDescriptorSets(app.core.device, 1, &write_descriptor_set, 0, NULL);
     // finish
     *out_id = id;
     return SUCCESS;
@@ -209,10 +209,10 @@ warn_t skd_load_image_from_file(const char *path, uint32_t *out_id) {
 
 void skd_unload_image(uint32_t id) {
     if (id >= app.resource.max_image_texture_num || app.resource.image_textures[id].view == NULL) return;
-    vkDeviceWaitIdle(app.device);
+    vkDeviceWaitIdle(app.core.device);
     // detach from descriptor set
     VkDescriptorImageInfo sampler_descriptor_image_info = {
-        app.sampler,
+        app.pipeline.sampler,
         app.resource.image_textures[0].view,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     };
@@ -228,11 +228,11 @@ void skd_unload_image(uint32_t id) {
         NULL,
         NULL,
     };
-    vkUpdateDescriptorSets(app.device, 1, &write_descriptor_set, 0, NULL);
+    vkUpdateDescriptorSets(app.core.device, 1, &write_descriptor_set, 0, NULL);
     // unload
-    vkDestroyImageView(app.device, app.resource.image_textures[id].view, NULL);
-    vkDestroyImage(app.device, app.resource.image_textures[id].image, NULL);
-    vkFreeMemory(app.device, app.resource.image_textures[id].memory, NULL);
+    vkDestroyImageView(app.core.device, app.resource.image_textures[id].view, NULL);
+    vkDestroyImage(app.core.device, app.resource.image_textures[id].image, NULL);
+    vkFreeMemory(app.core.device, app.resource.image_textures[id].memory, NULL);
     app.resource.image_textures[id].view = NULL;
     app.resource.image_textures[id].image = NULL;
     app.resource.image_textures[id].memory = NULL;

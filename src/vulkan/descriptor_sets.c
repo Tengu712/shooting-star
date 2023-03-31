@@ -17,7 +17,7 @@ warn_t skd_use_image_texture(uint32_t id) {
     vkCmdBindDescriptorSets(
         app.framedata.command_buffer,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
-        app.pipeline_layout,
+        app.pipeline.pipeline_layout,
         0,
         1,
         &app.resource.descriptor_sets[id],

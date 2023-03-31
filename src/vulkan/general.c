@@ -25,6 +25,8 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
     // NOTE: is the same as that of image texture.
     const uint32_t max_descriptor_set_num = max_image_texture_num_add_1;
 
+// core
+
     // instance
     uint32_t inst_ext_props_cnt = 0;
     CHECK(vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, NULL), "failed to get the number of instance extension properties.");
@@ -56,17 +58,17 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         inst_exts_cnt,
         inst_exts,
     };
-    CHECK(vkCreateInstance(&create_info, NULL, &app.instance), "failed to create instance.");
+    CHECK(vkCreateInstance(&create_info, NULL, &app.core.instance), "failed to create instance.");
     free((char **)inst_exts);
     free(inst_ext_props);
 
     // physical device
     uint32_t phys_devices_cnt = 0;
-    CHECK(vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, NULL), "failed to get the number of physical devices.");
+    CHECK(vkEnumeratePhysicalDevices(app.core.instance, &phys_devices_cnt, NULL), "failed to get the number of physical devices.");
     VkPhysicalDevice *phys_devices = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * phys_devices_cnt);
-    CHECK(vkEnumeratePhysicalDevices(app.instance, &phys_devices_cnt, phys_devices), "failed to enumerate physical devices.");
+    CHECK(vkEnumeratePhysicalDevices(app.core.instance, &phys_devices_cnt, phys_devices), "failed to enumerate physical devices.");
     const VkPhysicalDevice phys_device = phys_devices[0];
-    vkGetPhysicalDeviceMemoryProperties(phys_device, &app.phys_device_memory_prop);
+    vkGetPhysicalDeviceMemoryProperties(phys_device, &app.core.phys_device_memory_prop);
     free(phys_devices);
 
     // queue family index
@@ -119,9 +121,11 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         device_exts,
         NULL,
     };
-    CHECK(vkCreateDevice(phys_device, &device_create_info, NULL, &app.device), "failed to create device.");
+    CHECK(vkCreateDevice(phys_device, &device_create_info, NULL, &app.core.device), "failed to create device.");
     free((char**)device_exts);
     free(device_ext_props);
+
+// renderer
 
     // surface
 #ifdef __linux__
@@ -132,7 +136,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         window_param->data.xcb_window.connection,
         window_param->data.xcb_window.window,
     };
-    CHECK(vkCreateXcbSurfaceKHR(app.instance, &ci, NULL, &app.surface), "failed to create xcb surface.");
+    CHECK(vkCreateXcbSurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create xcb surface.");
 #elif _WIN32
     VkWin32SurfaceCreateInfoKHR ci = {
         VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
@@ -141,12 +145,12 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         window_param->data.winapi_window.hinst,
         window_param->data.winapi_window.hwnd,
     };
-    CHECK(vkCreateWin32SurfaceKHR(app.instance, &ci, NULL, &app.surface), "failed to create win32 surface.");
+    CHECK(vkCreateWin32SurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create win32 surface.");
 #endif
     uint32_t surface_formats_cnt = 0;
-    CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, NULL), "failed to get the number of surface formats.");
+    CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.rendering.surface, &surface_formats_cnt, NULL), "failed to get the number of surface formats.");
     VkSurfaceFormatKHR *surface_formats = (VkSurfaceFormatKHR *)malloc(sizeof(VkSurfaceFormatKHR) * surface_formats_cnt);
-    CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.surface, &surface_formats_cnt, surface_formats), "failed to get surface formats.");
+    CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.rendering.surface, &surface_formats_cnt, surface_formats), "failed to get surface formats.");
     int32_t surface_format_index = -1;
     for (int32_t i = 0; i < surface_formats_cnt; ++i) {
         if (surface_formats[i].format == VK_FORMAT_B8G8R8A8_UNORM) {
@@ -157,10 +161,79 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
     if (surface_format_index == -1) error("failed to get surface format.");
     const VkSurfaceFormatKHR surface_format = surface_formats[surface_format_index];
     VkSurfaceCapabilitiesKHR surface_capabilities;
-    CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.surface, &surface_capabilities), "failed to get surface capabilities.");
-    app.width = surface_capabilities.currentExtent.width;
-    app.height = surface_capabilities.currentExtent.height;
+    CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.rendering.surface, &surface_capabilities), "failed to get surface capabilities.");
+    app.rendering.width = surface_capabilities.currentExtent.width;
+    app.rendering.height = surface_capabilities.currentExtent.height;
     free(surface_formats);
+
+    // swapchain
+    const uint32_t min_image_count = surface_capabilities.minImageCount > 2 ? surface_capabilities.minImageCount : 2;
+    const VkSwapchainCreateInfoKHR swapchain_create_info = {
+        VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        NULL,
+        0,
+        app.rendering.surface,
+        min_image_count,
+        surface_format.format,
+        surface_format.colorSpace,
+        surface_capabilities.currentExtent,
+        1,
+        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_SHARING_MODE_EXCLUSIVE,
+        0,
+        NULL,
+        surface_capabilities.currentTransform,
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_PRESENT_MODE_FIFO_KHR,
+        VK_TRUE,
+        VK_NULL_HANDLE
+    };
+    CHECK(vkCreateSwapchainKHR(app.core.device, &swapchain_create_info, NULL, &app.rendering.swapchain), "failed to create swapchain.");
+
+    // image views
+    CHECK(vkGetSwapchainImagesKHR(app.core.device, app.rendering.swapchain, &app.rendering.images_cnt, NULL), "failed to get the number of swapchain images.");
+    VkImage *images = (VkImage *)malloc(sizeof(VkImage) * app.rendering.images_cnt);
+    CHECK(vkGetSwapchainImagesKHR(app.core.device, app.rendering.swapchain, &app.rendering.images_cnt, images), "failed to get swapchain images.");
+    app.rendering.image_views = (VkImageView *)malloc(sizeof(VkImageView) * app.rendering.images_cnt);
+    for (int32_t i = 0; i < app.rendering.images_cnt; ++i) {
+        const VkImageViewCreateInfo image_view_create_info = {
+            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            NULL,
+            0,
+            images[i],
+            VK_IMAGE_VIEW_TYPE_2D,
+            surface_format.format,
+            {
+                VK_COMPONENT_SWIZZLE_R,
+                VK_COMPONENT_SWIZZLE_G,
+                VK_COMPONENT_SWIZZLE_B,
+                VK_COMPONENT_SWIZZLE_A,
+            },
+            {
+                VK_IMAGE_ASPECT_COLOR_BIT,
+                0,
+                1,
+                0,
+                1,
+            }
+        };
+        CHECK(vkCreateImageView(app.core.device, &image_view_create_info, NULL, &app.rendering.image_views[i]), "failed to create image view.");
+    }
+    free(images);
+
+    // queue
+    vkGetDeviceQueue(app.core.device, queue_family_index, 0, &app.rendering.queue);
+
+    // command pool
+    const VkCommandPoolCreateInfo command_pool_create_info = {
+        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        NULL,
+        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        queue_family_index,
+    };
+    CHECK(vkCreateCommandPool(app.core.device, &command_pool_create_info, NULL, &app.rendering.command_pool), "failed to create command pool.");
+
+// pipeline
 
     // render pass
     const VkAttachmentDescription attachment_desc = {
@@ -201,92 +274,25 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         0,
         NULL,
     };
-    CHECK(vkCreateRenderPass(app.device, &render_pass_create_info, NULL, &app.render_pass), "failed to create render pass.");
-
-    // swapchain
-    const uint32_t min_image_count = surface_capabilities.minImageCount > 2 ? surface_capabilities.minImageCount : 2;
-    const VkSwapchainCreateInfoKHR swapchain_create_info = {
-        VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        NULL,
-        0,
-        app.surface,
-        min_image_count,
-        surface_format.format,
-        surface_format.colorSpace,
-        surface_capabilities.currentExtent,
-        1,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_SHARING_MODE_EXCLUSIVE,
-        0,
-        NULL,
-        surface_capabilities.currentTransform,
-        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        VK_PRESENT_MODE_FIFO_KHR,
-        VK_TRUE,
-        VK_NULL_HANDLE
-    };
-    CHECK(vkCreateSwapchainKHR(app.device, &swapchain_create_info, NULL, &app.swapchain), "failed to create swapchain.");
-
-    // image views
-    CHECK(vkGetSwapchainImagesKHR(app.device, app.swapchain, &app.images_cnt, NULL), "failed to get the number of swapchain images.");
-    VkImage *images = (VkImage *)malloc(sizeof(VkImage) * app.images_cnt);
-    CHECK(vkGetSwapchainImagesKHR(app.device, app.swapchain, &app.images_cnt, images), "failed to get swapchain images.");
-    app.image_views = (VkImageView *)malloc(sizeof(VkImageView) * app.images_cnt);
-    for (int32_t i = 0; i < app.images_cnt; ++i) {
-        const VkImageViewCreateInfo image_view_create_info = {
-            VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            NULL,
-            0,
-            images[i],
-            VK_IMAGE_VIEW_TYPE_2D,
-            surface_format.format,
-            {
-                VK_COMPONENT_SWIZZLE_R,
-                VK_COMPONENT_SWIZZLE_G,
-                VK_COMPONENT_SWIZZLE_B,
-                VK_COMPONENT_SWIZZLE_A,
-            },
-            {
-                VK_IMAGE_ASPECT_COLOR_BIT,
-                0,
-                1,
-                0,
-                1,
-            }
-        };
-        CHECK(vkCreateImageView(app.device, &image_view_create_info, NULL, &app.image_views[i]), "failed to create image view.");
-    }
-    free(images);
+    CHECK(vkCreateRenderPass(app.core.device, &render_pass_create_info, NULL, &app.pipeline.render_pass), "failed to create render pass.");
 
     // framebuffers
     VkFramebufferCreateInfo frame_buffer_create_info = {
         VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         NULL,
         0,
-        app.render_pass,
+        app.pipeline.render_pass,
         1,
         NULL,
-        app.width,
-        app.height,
+        app.rendering.width,
+        app.rendering.height,
         1,
     };
-    app.framebuffers = (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.images_cnt);
-    for (int32_t i = 0; i < app.images_cnt; ++i) {
-        frame_buffer_create_info.pAttachments = &app.image_views[i];
-        CHECK(vkCreateFramebuffer(app.device, &frame_buffer_create_info, NULL, &app.framebuffers[i]), "failed to create framebuffer.");
+    app.pipeline.framebuffers = (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.rendering.images_cnt);
+    for (int32_t i = 0; i < app.rendering.images_cnt; ++i) {
+        frame_buffer_create_info.pAttachments = &app.rendering.image_views[i];
+        CHECK(vkCreateFramebuffer(app.core.device, &frame_buffer_create_info, NULL, &app.pipeline.framebuffers[i]), "failed to create framebuffer.");
     }
-
-    // queue
-    vkGetDeviceQueue(app.device, queue_family_index, 0, &app.queue);
-
-    // command pool
-    const VkCommandPoolCreateInfo command_pool_create_info = {
-        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        NULL,
-        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        queue_family_index,
-    };
-    CHECK(vkCreateCommandPool(app.device, &command_pool_create_info, NULL, &app.command_pool), "failed to create command pool.");
 
     // shaders
     VkShaderModuleCreateInfo shader_module_create_info = {
@@ -296,10 +302,10 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         shader_vert_size,
         (const uint32_t *)shader_vert_data,
     };
-    CHECK(vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.vert_shader), "failed to create vertex shader module.");
+    CHECK(vkCreateShaderModule(app.core.device, &shader_module_create_info, NULL, &app.pipeline.vert_shader), "failed to create vertex shader module.");
     shader_module_create_info.codeSize = shader_frag_size;
     shader_module_create_info.pCode = (const uint32_t *)shader_frag_data;
-    CHECK(vkCreateShaderModule(app.device, &shader_module_create_info, NULL, &app.frag_shader), "failed to create fragment shader module.");
+    CHECK(vkCreateShaderModule(app.core.device, &shader_module_create_info, NULL, &app.pipeline.frag_shader), "failed to create fragment shader module.");
 
     // sampler
     VkSamplerCreateInfo sampler_create_info = {
@@ -322,7 +328,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
         0,
     };
-    CHECK(vkCreateSampler(app.device, &sampler_create_info, NULL, &app.sampler), "failed to create sampler.");
+    CHECK(vkCreateSampler(app.core.device, &sampler_create_info, NULL, &app.pipeline.sampler), "failed to create sampler.");
 
     // descriptor
     VkDescriptorPoolSize descriptor_pool_sizes[] = {
@@ -343,7 +349,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         2,
         descriptor_pool_sizes,
     };
-    CHECK(vkCreateDescriptorPool(app.device, &descriptor_pool_create_info, NULL, &app.descriptor_pool), "failed to create descriptor pool.");
+    CHECK(vkCreateDescriptorPool(app.core.device, &descriptor_pool_create_info, NULL, &app.pipeline.descriptor_pool), "failed to create descriptor pool.");
     VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
         {
             0,
@@ -367,7 +373,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         2,
         descriptor_set_layout_bindings,
     };
-    CHECK(vkCreateDescriptorSetLayout(app.device, &descriptor_set_layout_create_info, NULL, &app.descriptor_set_layout), "failed to create descriptor set layout.");
+    CHECK(vkCreateDescriptorSetLayout(app.core.device, &descriptor_set_layout_create_info, NULL, &app.pipeline.descriptor_set_layout), "failed to create descriptor set layout.");
 
     // pipeline layout
     VkPushConstantRange push_constant_range = {
@@ -380,11 +386,11 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         NULL,
         0,
         1,
-        &app.descriptor_set_layout,
+        &app.pipeline.descriptor_set_layout,
         1,
         &push_constant_range,
     };
-    CHECK(vkCreatePipelineLayout(app.device, &pipeline_layout_create_info, NULL, &app.pipeline_layout), "failed to create pipeline layout.");
+    CHECK(vkCreatePipelineLayout(app.core.device, &pipeline_layout_create_info, NULL, &app.pipeline.pipeline_layout), "failed to create pipeline layout.");
 
     // pipeline
     VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
@@ -393,7 +399,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
             NULL,
             0,
             VK_SHADER_STAGE_VERTEX_BIT,
-            app.vert_shader,
+            app.pipeline.vert_shader,
             "main",
             NULL,
         },
@@ -402,7 +408,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
             NULL,
             0,
             VK_SHADER_STAGE_FRAGMENT_BIT,
-            app.frag_shader,
+            app.pipeline.frag_shader,
             "main",
             NULL,
         },
@@ -435,12 +441,12 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
     VkViewport viewport = {
         0.0f,
         0.0f,
-        (float)app.width,
-        (float)app.height,
+        (float)app.rendering.width,
+        (float)app.rendering.height,
         0.0f,
         1.0f,
     };
-    VkRect2D scissor = { {0, 0}, {app.width, app.height} };
+    VkRect2D scissor = { {0, 0}, {app.rendering.width, app.rendering.height} };
     VkPipelineViewportStateCreateInfo viewport_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         NULL,
@@ -516,13 +522,13 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         NULL,
         &color_blend_state_create_info,
         NULL,
-        app.pipeline_layout,
-        app.render_pass,
+        app.pipeline.pipeline_layout,
+        app.pipeline.render_pass,
         0,
         NULL,
         0,
     };
-    CHECK(vkCreateGraphicsPipelines(app.device, VK_NULL_HANDLE, 1, &pipeline_create_info, NULL, &app.pipeline), "failed to create pipeline.");
+    CHECK(vkCreateGraphicsPipelines(app.core.device, VK_NULL_HANDLE, 1, &pipeline_create_info, NULL, &app.pipeline.pipeline), "failed to create pipeline.");
 
 // frame data
 
@@ -530,11 +536,11 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
     const VkCommandBufferAllocateInfo command_buffer_allocate_info = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         NULL,
-        app.command_pool,
+        app.rendering.command_pool,
         VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         1,
     };
-    CHECK(vkAllocateCommandBuffers(app.device, &command_buffer_allocate_info, &app.framedata.command_buffer), "failed to allocate command buffers.");
+    CHECK(vkAllocateCommandBuffers(app.core.device, &command_buffer_allocate_info, &app.framedata.command_buffer), "failed to allocate command buffers.");
 
     // fence
     const VkFenceCreateInfo fence_create_info = {
@@ -542,7 +548,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         NULL,
         VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    CHECK(vkCreateFence(app.device, &fence_create_info, NULL, &app.framedata.fence), "failed to create fence.");
+    CHECK(vkCreateFence(app.core.device, &fence_create_info, NULL, &app.framedata.fence), "failed to create fence.");
 
     // semaphores
     const VkSemaphoreCreateInfo semaphore_create_info = {
@@ -550,8 +556,8 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         NULL,
         0,
     };
-    CHECK(vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.render_semaphore), "failed to create semaphore to wait for render completed.");
-    CHECK(vkCreateSemaphore(app.device, &semaphore_create_info, NULL, &app.framedata.present_semaphore), "failed to create semaphore to wait for present completed.");
+    CHECK(vkCreateSemaphore(app.core.device, &semaphore_create_info, NULL, &app.framedata.render_semaphore), "failed to create semaphore to wait for render completed.");
+    CHECK(vkCreateSemaphore(app.core.device, &semaphore_create_info, NULL, &app.framedata.present_semaphore), "failed to create semaphore to wait for present completed.");
 
 // rendering default objects
 
@@ -587,18 +593,18 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
         VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
             VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
             NULL,
-            app.descriptor_pool,
+            app.pipeline.descriptor_pool,
             1,
-            &app.descriptor_set_layout,
+            &app.pipeline.descriptor_set_layout,
         };
-        CHECK(vkAllocateDescriptorSets(app.device, &descriptor_set_allocate_info, &app.resource.descriptor_sets[i]), "failed to allocate descriptor sets.");
+        CHECK(vkAllocateDescriptorSets(app.core.device, &descriptor_set_allocate_info, &app.resource.descriptor_sets[i]), "failed to allocate descriptor sets.");
         VkDescriptorBufferInfo camera_descriptor_buffer_info = {
             app.resource.camera.buffer,
             0,
             VK_WHOLE_SIZE,
         };
         VkDescriptorImageInfo sampler_descriptor_image_info = {
-            app.sampler,
+            app.pipeline.sampler,
             app.resource.image_textures[0].view,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
@@ -628,7 +634,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
                 NULL,
             },
         };
-        vkUpdateDescriptorSets(app.device, 2, write_descriptor_sets, 0, NULL);
+        vkUpdateDescriptorSets(app.core.device, 2, write_descriptor_sets, 0, NULL);
     }
 
     // square
@@ -673,43 +679,43 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
 }
 
 void skd_terminate_vulkan(void) {
-    vkDeviceWaitIdle(app.device);
+    vkDeviceWaitIdle(app.core.device);
     // frame data
-    vkDestroySemaphore(app.device, app.framedata.present_semaphore, NULL);
-    vkDestroySemaphore(app.device, app.framedata.render_semaphore, NULL);
-    vkDestroyFence(app.device, app.framedata.fence, NULL);
-    vkFreeCommandBuffers(app.device, app.command_pool, 1, &app.framedata.command_buffer);
+    vkDestroySemaphore(app.core.device, app.framedata.present_semaphore, NULL);
+    vkDestroySemaphore(app.core.device, app.framedata.render_semaphore, NULL);
+    vkDestroyFence(app.core.device, app.framedata.fence, NULL);
+    vkFreeCommandBuffers(app.core.device, app.rendering.command_pool, 1, &app.framedata.command_buffer);
     // rendering default objects
     for (int32_t i = 1; i < app.resource.max_image_texture_num; ++i) {
         skd_unload_image(i);
     }
     skd_unload_image(0);
-    vkFreeMemory(app.device, app.resource.camera.buffer_memory, NULL);
-    vkDestroyBuffer(app.device, app.resource.camera.buffer, NULL);
-    vkFreeMemory(app.device, app.resource.square.vertex_buffer_memory, NULL);
-    vkFreeMemory(app.device, app.resource.square.index_buffer_memory, NULL);
-    vkDestroyBuffer(app.device, app.resource.square.vertex_buffer, NULL);
-    vkDestroyBuffer(app.device, app.resource.square.index_buffer, NULL);
+    vkFreeMemory(app.core.device, app.resource.camera.buffer_memory, NULL);
+    vkDestroyBuffer(app.core.device, app.resource.camera.buffer, NULL);
+    vkFreeMemory(app.core.device, app.resource.square.vertex_buffer_memory, NULL);
+    vkFreeMemory(app.core.device, app.resource.square.index_buffer_memory, NULL);
+    vkDestroyBuffer(app.core.device, app.resource.square.vertex_buffer, NULL);
+    vkDestroyBuffer(app.core.device, app.resource.square.index_buffer, NULL);
     // others
-    vkDestroyPipeline(app.device, app.pipeline, NULL);
-    vkDestroyPipelineLayout(app.device, app.pipeline_layout, NULL);
-    vkDestroyDescriptorPool(app.device, app.descriptor_pool, NULL);
-    vkDestroyDescriptorSetLayout(app.device, app.descriptor_set_layout, NULL);
-    vkDestroySampler(app.device, app.sampler, NULL);
-    vkDestroyShaderModule(app.device, app.vert_shader, NULL);
-    vkDestroyShaderModule(app.device, app.frag_shader, NULL);
-    vkDestroyCommandPool(app.device, app.command_pool, NULL);
-    for (int32_t i = 0; i < app.images_cnt; ++i) {
-        vkDestroyFramebuffer(app.device, app.framebuffers[i], NULL);
+    vkDestroyPipeline(app.core.device, app.pipeline.pipeline, NULL);
+    vkDestroyPipelineLayout(app.core.device, app.pipeline.pipeline_layout, NULL);
+    vkDestroyDescriptorPool(app.core.device, app.pipeline.descriptor_pool, NULL);
+    vkDestroyDescriptorSetLayout(app.core.device, app.pipeline.descriptor_set_layout, NULL);
+    vkDestroySampler(app.core.device, app.pipeline.sampler, NULL);
+    vkDestroyShaderModule(app.core.device, app.pipeline.vert_shader, NULL);
+    vkDestroyShaderModule(app.core.device, app.pipeline.frag_shader, NULL);
+    vkDestroyCommandPool(app.core.device, app.rendering.command_pool, NULL);
+    for (int32_t i = 0; i < app.rendering.images_cnt; ++i) {
+        vkDestroyFramebuffer(app.core.device, app.pipeline.framebuffers[i], NULL);
     }
-    for (int32_t i = 0; i < app.images_cnt; ++i) {
-        vkDestroyImageView(app.device, app.image_views[i], NULL);
+    for (int32_t i = 0; i < app.rendering.images_cnt; ++i) {
+        vkDestroyImageView(app.core.device, app.rendering.image_views[i], NULL);
     }
-    free(app.framebuffers);
-    free(app.image_views);
-    vkDestroySwapchainKHR(app.device, app.swapchain, NULL);
-    vkDestroyRenderPass(app.device, app.render_pass, NULL);
-    vkDestroySurfaceKHR(app.instance, app.surface, NULL);
-    vkDestroyDevice(app.device, NULL);
-    vkDestroyInstance(app.instance, NULL);
+    free(app.pipeline.framebuffers);
+    free(app.rendering.image_views);
+    vkDestroySwapchainKHR(app.core.device, app.rendering.swapchain, NULL);
+    vkDestroyRenderPass(app.core.device, app.pipeline.render_pass, NULL);
+    vkDestroySurfaceKHR(app.core.instance, app.rendering.surface, NULL);
+    vkDestroyDevice(app.core.device, NULL);
+    vkDestroyInstance(app.core.instance, NULL);
 }

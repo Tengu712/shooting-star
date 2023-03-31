@@ -70,7 +70,7 @@ clean_linux:
 	mkdir tmp/window
 	mkdir tmp/vulkan
 clean_windows:
-	del /F fireball.exe bin2c\bin2c.exe
+	del /F fireball.exe bin2c\bin2c.exe bin2c\bin2c.pdb
 	rd /s /q tmp
 	mkdir tmp
 	mkdir tmp\window
