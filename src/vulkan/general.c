@@ -16,7 +16,7 @@ extern int32_t shader_frag_size;
 VulkanApp app;
 
 warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
-    log_info("start initialize Vulkan ...");
+    log_info("start to initialize Vulkan ...");
 
     warn_t res = SUCCESS;
     // NOTE: considering empty image
@@ -668,6 +668,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
     }
 
     // finish
+    log_info("succeeded to initialize vulkan.");
     return res;
 }
 

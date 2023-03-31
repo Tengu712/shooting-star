@@ -21,7 +21,8 @@ void skd_create_window_param(SkdWindowParam *out) {
     out->data.winapi_window.hwnd = (void *)g_hwnd;
 }
 
-wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
+warn_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
+    log_info("start to initialize win32 window ...");
     // instance handle
     g_hinst = GetModuleHandle(NULL);
     // window class
@@ -40,17 +41,13 @@ wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
         L"WIN32APIWINDOW",
         NULL,
     };
-    if (!RegisterClassExW(&wc)) {
-        return EMSG_REGISTER_WNDCLASS;
-    }
+    if (!RegisterClassExW(&wc)) error("failed to register window class.");
     // adjust window size
     RECT rect = { 0, 0, (long)width, (long)height };
     AdjustWindowRectEx(&rect, style, 0, 0);
     // window
     wchar_t wtitle[256] = {};
-    if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) {
-        return EMSG_CONVERT_WTITLE;
-    }
+    if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) error("failed to convert title multibyte to wide.");
     g_hwnd = CreateWindowExW(
         0,
         L"WIN32APIWINDOW",
@@ -65,12 +62,11 @@ wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
         g_hinst,
         NULL
     );
-    if (!g_hwnd) {
-        return EMSG_CREATE_WINDOW;
-    }
+    if (!g_hwnd) error("failed to create window.");
     // finish
     ShowWindow(g_hwnd, SW_SHOWDEFAULT);
     UpdateWindow(g_hwnd);
+    log_info("succeeded to initialize win32 window.");
     return 0;
 }
 

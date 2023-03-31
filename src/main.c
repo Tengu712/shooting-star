@@ -8,7 +8,7 @@
 int32_t main() {
     // start up
     init_logger();
-    log_info("Starting up Fireball");
+    log_info("Fireball");
     // TODO: load configure
     // TODO: load game logic module
     const uint16_t width = 640;

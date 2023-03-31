@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) return (p);
+#define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) error((p));
 
 typedef struct {
     uint32_t flags;
@@ -29,23 +29,18 @@ void skd_create_window_param(SkdWindowParam *out) {
     out->data.xcb_window.window = g_window;
 }
 
-wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
+warn_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
+    log_info("start initialize xcb window ...");
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
-    if (xcb_connection_has_error(g_connection)) {
-        return EMSG_CONNECT_X;
-    }
+    if (xcb_connection_has_error(g_connection)) error("failed to get xcb connection.");
     // screen
     const xcb_setup_t *setup = xcb_get_setup(g_connection);
-    if (setup == NULL) {
-        return EMSG_GET_SETUP;
-    }
+    if (setup == NULL) error("failed to get xcb setup.");
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
     xcb_screen_t *screen = iter.data;
-    if (screen == NULL) {
-        return EMSG_GET_SCREEN;
-    }
+    if (screen == NULL) error("failed to get screen.");
     // window
     const uint32_t value_list[1] = {
         XCB_EVENT_MASK_EXPOSURE,
@@ -66,7 +61,7 @@ wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
         XCB_CW_EVENT_MASK,
         value_list
     );
-    CHECK(EMSG_CREATE_WINDOW);
+    CHECK("failed to create xcb window.");
     // title
     res = xcb_change_property(
         g_connection,
@@ -78,7 +73,7 @@ wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
         strlen(title),
         title
     );
-    CHECK(EMSG_CHANGE_PROPERTY);
+    CHECK("failed to change window title.");
     // disable resize
     XSizeHints size_hints;
     memset(&size_hints, 0, sizeof(XSizeHints));
@@ -97,7 +92,7 @@ wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
         sizeof(XSizeHints) >> 2,
         &size_hints
     );
-    CHECK(EMSG_CHANGE_PROPERTY);
+    CHECK("failed to make window unresizable.");
     // event
     xcb_intern_atom_cookie_t cookie_protocols = xcb_intern_atom(g_connection, 1, 12, "WM_PROTOCOLS");
     xcb_intern_atom_reply_t *atom_protocols = xcb_intern_atom_reply(g_connection, cookie_protocols, 0);
@@ -113,12 +108,13 @@ wndres_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
         1,
         &g_atom_delete_window->atom
     );
-    CHECK(EMSG_CHANGE_PROPERTY);
+    CHECK("failed to make window close when exiting it.");
     free(atom_protocols);
     // finish
     xcb_map_window(g_connection, g_window);
     xcb_flush(g_connection);
-    return EMSG_WINDOW_SUCCESS;
+    log_info("succeeded to initialize xcb window.");
+    return SUCCESS;
 }
 
 int32_t skd_do_window_events(void) {
