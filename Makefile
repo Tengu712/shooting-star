@@ -9,7 +9,6 @@ sstar_dependencies = \
 	tmp/vulkan/general.o \
 	tmp/vulkan/rendering.o \
 	tmp/vulkan/image.o \
-	tmp/vulkan/descriptor_sets.o \
 	tmp/shader.vert.o \
 	tmp/shader.frag.o
 window_dependencies = src/sstar.h src/common_window_vulkan.h src/window.h
@@ -50,8 +49,6 @@ tmp/vulkan/rendering.o:			$(vulkan_dependencies) src/vulkan/rendering.c
 	gcc -Wall -c -o tmp/vulkan/rendering.o src/vulkan/rendering.c
 tmp/vulkan/image.o:				$(vulkan_dependencies) src/vulkan/image.c
 	gcc -Wall -c -o tmp/vulkan/image.o src/vulkan/image.c
-tmp/vulkan/descriptor_sets.o:	$(vulkan_dependencies) src/vulkan/descriptor_sets.c
-	gcc -Wall -c -o tmp/vulkan/descriptor_sets.o src/vulkan/descriptor_sets.c
 
 tmp/shader.vert.o:	bin2c/bin2c src/shader.vert
 	glslc src/shader.vert -o tmp/shader.vert.spv

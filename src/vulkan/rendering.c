@@ -1,35 +1,41 @@
 #include "private.h"
 
+static uint32_t pre_image_idx = 0;
+static uint32_t cur_image_idx = 0;
+
 extern VulkanApp app;
 
-warn_t prepare_rendering(uint32_t *p_id) {
+warn_t prepare_rendering(void) {
     // get aquire image index
-    uint32_t next_image_idx;
     WARN(
         vkAcquireNextImageKHR(
             app.core.device,
             app.rendering.swapchain,
             UINT64_MAX,
-            app.framedata.present_semaphore,
+            app.frame_datas[pre_image_idx].semaphore,
             VK_NULL_HANDLE,
-            &next_image_idx
+            &cur_image_idx
         ),
         "failed to get next image index."
     );
-    // wait for a fence
-    const VkFence fence = app.framedata.fence;
-    if (vkWaitForFences(app.core.device, 1, &fence, VK_TRUE, UINT64_MAX) != 0) ss_warning("failed to wait for fence.");
-    // reset fences
-    if (vkResetFences(app.core.device, 1, &fence) != 0) ss_warning("failed to reset fence.");
-    // TODO: reset command buffer?
+    // wait for a fence and reset it
+    if (vkWaitForFences(app.core.device, 1, &app.frame_datas[cur_image_idx].fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) ss_warning("failed to wait for fence.");
+    if (vkResetFences(app.core.device, 1, &app.frame_datas[cur_image_idx].fence) != VK_SUCCESS) ss_warning("failed to reset fence.");
+    // reset a command buffer
+    if (vkResetCommandBuffer(
+            app.frame_datas[cur_image_idx].command_buffer,
+            VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT
+        ) != VK_SUCCESS)
+    {
+        ss_warning("failed to reset command buffer.");
+    }
     // finish
-    *p_id = next_image_idx;
     return SS_SUCCESS;
 }
 
-warn_t begin_render(uint32_t id, float r, float g, float b) {
+warn_t begin_render(float r, float g, float b) {
     // begin command buffer
-    const VkCommandBuffer command = app.framedata.command_buffer;
+    const VkCommandBuffer command = app.frame_datas[cur_image_idx].command_buffer;
     const VkCommandBufferBeginInfo command_buffer_begin_info = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         NULL,
@@ -44,7 +50,7 @@ warn_t begin_render(uint32_t id, float r, float g, float b) {
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         NULL,
         app.pipeline.render_pass,
-        app.pipeline.framebuffers[id],
+        app.pipeline.framebuffers[cur_image_idx],
         { {0, 0}, extent },
         1,
         &clear_value,
@@ -59,7 +65,7 @@ warn_t begin_render(uint32_t id, float r, float g, float b) {
         app.pipeline.pipeline_layout,
         0,
         1,
-        &app.resource.descriptor_sets[0],
+        &app.pipeline.descriptor_sets[0],
         0,
         NULL
     );
@@ -71,9 +77,8 @@ warn_t begin_render(uint32_t id, float r, float g, float b) {
     return SS_SUCCESS;
 }
 
-warn_t end_render(uint32_t id) {
-    const VkCommandBuffer command = app.framedata.command_buffer;
-    const VkFence fence = app.framedata.fence;
+warn_t end_render(void) {
+    const VkCommandBuffer command = app.frame_datas[cur_image_idx].command_buffer;
     // end
     vkCmdEndRenderPass(command);
     vkEndCommandBuffer(command);
@@ -83,35 +88,60 @@ warn_t end_render(uint32_t id) {
         VK_STRUCTURE_TYPE_SUBMIT_INFO,
         NULL,
         1,
-        &app.framedata.present_semaphore,
+        &app.frame_datas[pre_image_idx].semaphore,
         &wait_stage_mask,
         1,
         &command,
         1,
-        &app.framedata.render_semaphore,
+        &app.frame_datas[cur_image_idx].semaphore,
     };
-    WARN(vkQueueSubmit(app.rendering.queue, 1, &submit_info, fence), "failed to submit queue to render.");
+    WARN(vkQueueSubmit(app.rendering.queue, 1, &submit_info, app.frame_datas[cur_image_idx].fence), "failed to submit queue to render.");
     // present
     VkResult res;
     VkPresentInfoKHR present_info = {
         VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         NULL,
         1,
-        &app.framedata.render_semaphore,
+        &app.frame_datas[cur_image_idx].semaphore,
         1,
         &app.rendering.swapchain,
-        &id,
+        &cur_image_idx,
         &res,
     };
     WARN(vkQueuePresentKHR(app.rendering.queue, &present_info), "failed to enqueue present command.");
     // finish
+    pre_image_idx = cur_image_idx;
     return SS_SUCCESS;
 }
 
 void draw(const ModelData *data) {
-    const VkCommandBuffer command = app.framedata.command_buffer;
-    if (data != NULL) {
+    const VkCommandBuffer command = app.frame_datas[cur_image_idx].command_buffer;
+    if (data != NULL)
         vkCmdPushConstants(command, app.pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelData), data);
-    }
     vkCmdDrawIndexed(command, app.resource.square.index_cnt, 1, 0, 0, 0);
+}
+
+warn_t update_camera(const CameraData *camera_data) {
+    if (!map_memory(&app, app.resource.camera.buffer_memory, (void *)camera_data, sizeof(CameraData)))
+        return ss_warning("failed to map camera data.");
+    else
+        return SS_SUCCESS;
+}
+
+warn_t use_image_texture(uint32_t id) {
+    if (id >= app.resource.max_image_texture_cnt)
+        return ss_warning("tried to use image texture out of range.");
+    if (app.resource.image_textures[id].view == NULL || app.pipeline.descriptor_sets[id] == NULL)
+        return ss_warning("tried to use null image texture.");
+    vkCmdBindDescriptorSets(
+        app.frame_datas[cur_image_idx].command_buffer,
+        VK_PIPELINE_BIND_POINT_GRAPHICS,
+        app.pipeline.pipeline_layout,
+        0,
+        1,
+        &app.pipeline.descriptor_sets[id],
+        0,
+        NULL
+    );
+    return SS_SUCCESS;
 }

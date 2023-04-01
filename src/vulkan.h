@@ -18,15 +18,15 @@ void terminate_vulkan(void);
 //         Rendering                                                                                                 //
 // ================================================================================================================= //
 
-// A function to aquire next image id and wait for a fence.
-warn_t prepare_rendering(uint32_t *p_id);
+// A function to prepare rendering.
+warn_t prepare_rendering(void);
 
 // A function to begin to render.
 // To save processing image id, passed first parameter.
-warn_t begin_render(uint32_t id, float r, float g, float b);
+warn_t begin_render(float r, float g, float b);
 
 // A function to end to render.
-warn_t end_render(uint32_t id);
+warn_t end_render(void);
 
 // A function to draw.
 void draw(const ModelData *data);

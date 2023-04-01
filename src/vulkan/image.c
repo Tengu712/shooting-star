@@ -164,14 +164,13 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
 warn_t load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
     if (out_id == NULL) return ss_warning("tried to output image texture id to null.");
     int32_t id;
-    for (id = 0; id < app.resource.max_image_texture_num; ++id) {
+    for (id = 0; id < app.resource.max_image_texture_cnt; ++id) {
         if (app.resource.image_textures[id].image == NULL) break;
     }
-    if (id >= app.resource.max_image_texture_num) return ss_warning("tried to too many image textures.");
+    if (id >= app.resource.max_image_texture_cnt) return ss_warning("tried to too many image textures.");
     // load image
     if (load_image_texture(pixels, width, height, id) != SS_SUCCESS) return SS_WARN;
     // register image texture to descriptor set
-    // HACK: should i move this part into descriptor_sets.c?
     VkDescriptorImageInfo sampler_descriptor_image_info = {
         app.pipeline.sampler,
         app.resource.image_textures[id].view,
@@ -180,7 +179,7 @@ warn_t load_image_from_memory(const unsigned char *pixels, int32_t width, int32_
     VkWriteDescriptorSet write_descriptor_set = {
         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         NULL,
-        app.resource.descriptor_sets[id],
+        app.pipeline.descriptor_sets[id],
         1,
         0,
         1,
@@ -208,7 +207,7 @@ warn_t load_image_from_file(const char *path, uint32_t *out_id) {
 }
 
 void unload_image(uint32_t id) {
-    if (id >= app.resource.max_image_texture_num || app.resource.image_textures[id].view == NULL) return;
+    if (id >= app.resource.max_image_texture_cnt || app.resource.image_textures[id].view == NULL) return;
     vkDeviceWaitIdle(app.core.device);
     // detach from descriptor set
     VkDescriptorImageInfo sampler_descriptor_image_info = {
@@ -219,7 +218,7 @@ void unload_image(uint32_t id) {
     VkWriteDescriptorSet write_descriptor_set = {
         VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         NULL,
-        app.resource.descriptor_sets[id],
+        app.pipeline.descriptor_sets[id],
         1,
         0,
         1,

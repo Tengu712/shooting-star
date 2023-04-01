@@ -50,14 +50,15 @@ typedef struct VulkanApp_t {
         uint32_t width;
         uint32_t height;
         uint32_t images_cnt;
+        VkQueue queue;
+        VkCommandPool command_pool;
         VkSurfaceKHR surface;
         VkSwapchainKHR swapchain;
         VkImageView *image_views;
-        VkQueue queue;
-        VkCommandPool command_pool;
     } rendering;
     // A struct for objects for pipeline
     struct Pipeline_t {
+        uint32_t descriptor_sets_cnt;
         VkRenderPass render_pass;
         VkFramebuffer *framebuffers;
         VkShaderModule vert_shader;
@@ -65,6 +66,7 @@ typedef struct VulkanApp_t {
         VkSampler sampler;
         VkDescriptorSetLayout descriptor_set_layout;
         VkDescriptorPool descriptor_pool;
+        VkDescriptorSet *descriptor_sets;
         VkPipelineLayout pipeline_layout;
         VkPipeline pipeline;
     } pipeline;
@@ -72,18 +74,13 @@ typedef struct VulkanApp_t {
     struct FrameData_t {
         VkCommandBuffer command_buffer;
         VkFence fence;
-        VkSemaphore render_semaphore;
-        VkSemaphore present_semaphore;
-    } framedata;
+        VkSemaphore semaphore;
+    } *frame_datas;
     // A struct for 
     struct Resource_t {
-        // it's the same as max_image_texture_num
-        uint32_t max_descriptor_set_num;
-        VkDescriptorSet *descriptor_sets;
-        Camera camera;
-        // it's guaranteed to be greater than 1
-        uint32_t max_image_texture_num;
+        uint32_t max_image_texture_cnt;
         Image *image_textures;
+        Camera camera;
         Model square;
     } resource;
 } VulkanApp;

@@ -40,7 +40,7 @@ EXPORT void ss_error(const char *msg) {
 
 EXPORT warn_t ss_warning(const char *msg) {
 #ifndef NOLOG
-    fprintf(stderr, "[ WARN ] ");
+    fprintf(stderr, "[ WARN  ] ");
     print_indent(stderr);
     fprintf(stderr, "%s\n", msg);
     fflush(stderr);
@@ -50,7 +50,7 @@ EXPORT warn_t ss_warning(const char *msg) {
 
 EXPORT void ss_info(const char *msg) {
 #ifndef NOLOG
-    fprintf(stdout, "[ INFO ] ");
+    fprintf(stdout, "[ INFO  ] ");
     print_indent(stdout);
     fprintf(stdout, "%s\n", msg);
     fflush(stdout);

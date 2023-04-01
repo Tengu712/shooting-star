@@ -33,9 +33,8 @@ EXPORT warn_t ss_should_close() {
 
 EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, uint32_t count) {
     warn_t res = SS_SUCCESS;
-    uint32_t id;
-    if (prepare_rendering(&id) != SS_SUCCESS) res = SS_WARN;
-    if (begin_render(id, r, g, b) != SS_SUCCESS) res = SS_WARN;
+    if (prepare_rendering() != SS_SUCCESS) res = SS_WARN;
+    if (begin_render(r, g, b) != SS_SUCCESS) res = SS_WARN;
 
     for (uint32_t i = 0; i < count; ++i) {
         switch (query[i].kind) {
@@ -51,6 +50,6 @@ EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, 
         }
     }
 
-    if (end_render(id) != SS_SUCCESS) res = SS_WARN;
+    if (end_render() != SS_SUCCESS) res = SS_WARN;
     return res;
 }

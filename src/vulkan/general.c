@@ -1,12 +1,24 @@
 #include "private.h"
 
-#ifdef RELEASE_BUILD
-#define INST_LAYER_NAMES_CNT 0
-#define INST_LAYER_NAMES { }
-#else
-#define INST_LAYER_NAMES_CNT 1
-#define INST_LAYER_NAMES { "VK_LAYER_KHRONOS_validation\0" }
+#ifdef _WIN32
+#    define INST_EXT_NAME_SURFACE "VK_KHR_win32_surface"
+#elif __linux__
+#    define INST_EXT_NAME_SURFACE "VK_KHR_xcb_surface"
 #endif
+
+#ifdef RELEASE_BUILD
+#    define INST_EXT_NAMES_CNT 2
+#    define INST_EXT_NAMES { "VK_KHR_surface", INST_EXT_NAME_SURFACE }
+#    define INST_LAYER_NAMES_CNT 0
+#    define INST_LAYER_NAMES { }
+#else
+#    define INST_EXT_NAMES_CNT 4
+#    define INST_EXT_NAMES { "VK_EXT_debug_report", "VK_EXT_debug_utils", "VK_KHR_surface", INST_EXT_NAME_SURFACE }
+#    define INST_LAYER_NAMES_CNT 1
+#    define INST_LAYER_NAMES { "VK_LAYER_KHRONOS_validation\0" }
+#endif
+#define DEVICE_EXT_NAMES_CNT 1
+#define DEVICE_EXT_NAMES { "VK_KHR_swapchain" }
 
 extern char shader_vert_data[];
 extern int32_t shader_vert_size;
@@ -15,29 +27,21 @@ extern int32_t shader_frag_size;
 
 VulkanApp app;
 
-warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_num) {
+warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_cnt) {
     ss_info("initializing Vulkan ...");
     ss_indent_logger();
 
     warn_t res = SS_SUCCESS;
     // NOTE: considering empty image
-    const uint32_t max_image_texture_num_add_1 = max_image_texture_num + 1;
-    // NOTE: as for Shooting Star the num of descriptor sets
-    // NOTE: is the same as that of image texture.
-    const uint32_t max_descriptor_set_num = max_image_texture_num_add_1;
+    app.resource.max_image_texture_cnt = max_image_texture_cnt + 1;
+    // NOTE: as for Shooting Star the number of descriptor sets is the same as the max number of image textures.
+    app.pipeline.descriptor_sets_cnt = app.resource.max_image_texture_cnt;
 
 // core
 
     // instance
-    uint32_t inst_ext_props_cnt = 0;
-    CHECK(vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, NULL), "failed to get the number of instance extension properties.");
-    VkExtensionProperties *inst_ext_props = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * inst_ext_props_cnt);
-    CHECK(vkEnumerateInstanceExtensionProperties(NULL, &inst_ext_props_cnt, inst_ext_props), "failed to enumerate instance extension properties.");
-    const char **inst_exts = (const char **)malloc(sizeof(char *) * inst_ext_props_cnt);
-    const int32_t inst_exts_cnt = inst_ext_props_cnt;
-    for (int32_t i = 0; i < inst_ext_props_cnt; ++i) {
-        inst_exts[i] = inst_ext_props[i].extensionName;
-    }
+    const int32_t inst_ext_names_cnt = INST_EXT_NAMES_CNT;
+    const char *inst_ext_names[INST_EXT_NAMES_CNT] = INST_EXT_NAMES;
     const int32_t inst_layer_names_cnt = INST_LAYER_NAMES_CNT;
     const char *inst_layer_names[INST_LAYER_NAMES_CNT] = INST_LAYER_NAMES;
     const VkApplicationInfo app_info = {
@@ -56,18 +60,17 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
         &app_info,
         inst_layer_names_cnt,
         inst_layer_names,
-        inst_exts_cnt,
-        inst_exts,
+        inst_ext_names_cnt,
+        inst_ext_names,
     };
     CHECK(vkCreateInstance(&create_info, NULL, &app.core.instance), "failed to create instance.");
-    free((char **)inst_exts);
-    free(inst_ext_props);
 
     // physical device
     uint32_t phys_devices_cnt = 0;
     CHECK(vkEnumeratePhysicalDevices(app.core.instance, &phys_devices_cnt, NULL), "failed to get the number of physical devices.");
     VkPhysicalDevice *phys_devices = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * phys_devices_cnt);
     CHECK(vkEnumeratePhysicalDevices(app.core.instance, &phys_devices_cnt, phys_devices), "failed to enumerate physical devices.");
+    // TODO: select a physical device properly
     const VkPhysicalDevice phys_device = phys_devices[0];
     vkGetPhysicalDeviceMemoryProperties(phys_device, &app.core.phys_device_memory_prop);
     free(phys_devices);
@@ -88,19 +91,8 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
     free(queue_family_props);
 
     // device
-    uint32_t device_ext_props_cnt = 0;
-    CHECK(vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, NULL), "failed to get the number of device extension properties.");
-    VkExtensionProperties *device_ext_props = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * device_ext_props_cnt);
-    CHECK(vkEnumerateDeviceExtensionProperties(phys_device, NULL, &device_ext_props_cnt, device_ext_props), "failed to enumerate device extension properties.");
-    const char **device_exts = (const char**)malloc(sizeof(char*) * device_ext_props_cnt);
-    int32_t device_exts_cnt = 0;
-    for (int32_t i = 0; i < device_ext_props_cnt; ++i) {
-        if (strcmp(device_ext_props[i].extensionName, "VK_EXT_buffer_device_address") == 0) {
-            continue;
-        }
-        device_exts[device_exts_cnt] = device_ext_props[i].extensionName;
-        device_exts_cnt += 1;
-    }
+    const int32_t device_ext_names_cnt = DEVICE_EXT_NAMES_CNT;
+    const char *device_ext_names[DEVICE_EXT_NAMES_CNT] = DEVICE_EXT_NAMES;
     const float default_queue_priority = 1.0;
     const VkDeviceQueueCreateInfo queue_create_info = {
         VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -118,15 +110,25 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
         &queue_create_info,
         0,
         NULL,
-        device_exts_cnt,
-        device_exts,
+        device_ext_names_cnt,
+        device_ext_names,
         NULL,
     };
     CHECK(vkCreateDevice(phys_device, &device_create_info, NULL, &app.core.device), "failed to create device.");
-    free((char**)device_exts);
-    free(device_ext_props);
 
 // renderer
+
+    // queue
+    vkGetDeviceQueue(app.core.device, queue_family_index, 0, &app.rendering.queue);
+
+    // command pool
+    const VkCommandPoolCreateInfo command_pool_create_info = {
+        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        NULL,
+        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        queue_family_index,
+    };
+    CHECK(vkCreateCommandPool(app.core.device, &command_pool_create_info, NULL, &app.rendering.command_pool), "failed to create command pool.");
 
     // surface
 #ifdef __linux__
@@ -221,18 +223,6 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
         CHECK(vkCreateImageView(app.core.device, &image_view_create_info, NULL, &app.rendering.image_views[i]), "failed to create image view.");
     }
     free(images);
-
-    // queue
-    vkGetDeviceQueue(app.core.device, queue_family_index, 0, &app.rendering.queue);
-
-    // command pool
-    const VkCommandPoolCreateInfo command_pool_create_info = {
-        VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        NULL,
-        VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        queue_family_index,
-    };
-    CHECK(vkCreateCommandPool(app.core.device, &command_pool_create_info, NULL, &app.rendering.command_pool), "failed to create command pool.");
 
 // pipeline
 
@@ -332,26 +322,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
     CHECK(vkCreateSampler(app.core.device, &sampler_create_info, NULL, &app.pipeline.sampler), "failed to create sampler.");
 
     // descriptor
-    VkDescriptorPoolSize descriptor_pool_sizes[] = {
-        {
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            1,
-        },
-        {
-            VK_DESCRIPTOR_TYPE_SAMPLER,
-            max_image_texture_num_add_1,
-        },
-    };
-    VkDescriptorPoolCreateInfo descriptor_pool_create_info = {
-        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        NULL,
-        0,
-        max_descriptor_set_num,
-        2,
-        descriptor_pool_sizes,
-    };
-    CHECK(vkCreateDescriptorPool(app.core.device, &descriptor_pool_create_info, NULL, &app.pipeline.descriptor_pool), "failed to create descriptor pool.");
-    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
+    const VkDescriptorSetLayoutBinding descriptor_set_layout_bindings[] = {
         {
             0,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -367,7 +338,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
             NULL,
         },
     };
-    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
+    const VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         NULL,
         0,
@@ -375,6 +346,36 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
         descriptor_set_layout_bindings,
     };
     CHECK(vkCreateDescriptorSetLayout(app.core.device, &descriptor_set_layout_create_info, NULL, &app.pipeline.descriptor_set_layout), "failed to create descriptor set layout.");
+    const VkDescriptorPoolSize descriptor_pool_sizes[] = {
+        {
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            1,
+        },
+        {
+            VK_DESCRIPTOR_TYPE_SAMPLER,
+            1,
+        },
+    };
+    const VkDescriptorPoolCreateInfo descriptor_pool_create_info = {
+        VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        NULL,
+        0,
+        app.pipeline.descriptor_sets_cnt,
+        2,
+        descriptor_pool_sizes,
+    };
+    CHECK(vkCreateDescriptorPool(app.core.device, &descriptor_pool_create_info, NULL, &app.pipeline.descriptor_pool), "failed to create descriptor pool.");
+    app.pipeline.descriptor_sets = (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * app.pipeline.descriptor_sets_cnt);
+    for (uint32_t i = 0; i < app.pipeline.descriptor_sets_cnt; ++i) {
+        const VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
+            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            NULL,
+            app.pipeline.descriptor_pool,
+            1,
+            &app.pipeline.descriptor_set_layout,
+        };
+        CHECK(vkAllocateDescriptorSets(app.core.device, &descriptor_set_allocate_info, &app.pipeline.descriptor_sets[i]), "failed to allocate descriptor sets.");
+    }
 
     // pipeline layout
     VkPushConstantRange push_constant_range = {
@@ -533,38 +534,38 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
 
 // frame data
 
-    // command buffers
-    const VkCommandBufferAllocateInfo command_buffer_allocate_info = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        NULL,
-        app.rendering.command_pool,
-        VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        1,
-    };
-    CHECK(vkAllocateCommandBuffers(app.core.device, &command_buffer_allocate_info, &app.framedata.command_buffer), "failed to allocate command buffers.");
+    app.frame_datas = (struct FrameData_t *)malloc(sizeof(struct FrameData_t) * app.rendering.images_cnt);
 
-    // fence
-    const VkFenceCreateInfo fence_create_info = {
-        VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        NULL,
-        VK_FENCE_CREATE_SIGNALED_BIT,
-    };
-    CHECK(vkCreateFence(app.core.device, &fence_create_info, NULL, &app.framedata.fence), "failed to create fence.");
+    for (uint32_t i = 0; i < app.rendering.images_cnt; ++i) {
+        // command buffers
+        const VkCommandBufferAllocateInfo command_buffer_allocate_info = {
+            VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            NULL,
+            app.rendering.command_pool,
+            VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            1,
+        };
+        CHECK(vkAllocateCommandBuffers(app.core.device, &command_buffer_allocate_info, &app.frame_datas[i].command_buffer), "failed to allocate command buffers.");
 
-    // semaphores
-    const VkSemaphoreCreateInfo semaphore_create_info = {
-        VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        NULL,
-        0,
-    };
-    CHECK(vkCreateSemaphore(app.core.device, &semaphore_create_info, NULL, &app.framedata.render_semaphore), "failed to create semaphore to wait for render completed.");
-    CHECK(vkCreateSemaphore(app.core.device, &semaphore_create_info, NULL, &app.framedata.present_semaphore), "failed to create semaphore to wait for present completed.");
+        // fence
+        const VkFenceCreateInfo fence_create_info = {
+            VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            NULL,
+            VK_FENCE_CREATE_SIGNALED_BIT,
+        };
+        CHECK(vkCreateFence(app.core.device, &fence_create_info, NULL, &app.frame_datas[i].fence), "failed to create fence.");
 
-// rendering default objects
+        // semaphores
+        const VkSemaphoreCreateInfo semaphore_create_info = {
+            VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            NULL,
+            0,
+        };
+        CHECK(vkCreateSemaphore(app.core.device, &semaphore_create_info, NULL, &app.frame_datas[i].semaphore), "failed to create semaphore.");
+    }
+    
 
-    // descriptor sets #1
-    app.resource.max_descriptor_set_num = max_descriptor_set_num;
-    app.resource.descriptor_sets = (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * app.resource.max_descriptor_set_num);
+// rendering resources
 
     // camera
     const CameraData default_camera_data =  {
@@ -588,22 +589,13 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
     }
 
     // image textures
-    app.resource.max_image_texture_num = max_image_texture_num_add_1;
-    app.resource.image_textures = (Image *)calloc(app.resource.max_image_texture_num, sizeof(Image));
+    app.resource.image_textures = (Image *)calloc(app.resource.max_image_texture_cnt, sizeof(Image));
     // empty image
     const unsigned char pixels[] = { 0xff, 0xff, 0xff, 0xff };
     if (load_image_texture(pixels, 1, 1, 0) != SS_SUCCESS) res = SS_WARN;
 
-    // descriptor sets #2
-    for (int32_t i = 0; i < app.resource.max_descriptor_set_num; ++i) {
-        VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
-            VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            NULL,
-            app.pipeline.descriptor_pool,
-            1,
-            &app.pipeline.descriptor_set_layout,
-        };
-        CHECK(vkAllocateDescriptorSets(app.core.device, &descriptor_set_allocate_info, &app.resource.descriptor_sets[i]), "failed to allocate descriptor sets.");
+    // update all descriptor sets
+    for (int32_t i = 0; i < app.pipeline.descriptor_sets_cnt; ++i) {
         VkDescriptorBufferInfo camera_descriptor_buffer_info = {
             app.resource.camera.buffer,
             0,
@@ -618,7 +610,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
             {
                 VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 NULL,
-                app.resource.descriptor_sets[i],
+                app.pipeline.descriptor_sets[i],
                 0,
                 0,
                 1,
@@ -630,7 +622,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
             {
                 VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 NULL,
-                app.resource.descriptor_sets[i],
+                app.pipeline.descriptor_sets[i],
                 1,
                 0,
                 1,
@@ -688,12 +680,13 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_n
 void terminate_vulkan(void) {
     vkDeviceWaitIdle(app.core.device);
     // frame data
-    vkDestroySemaphore(app.core.device, app.framedata.present_semaphore, NULL);
-    vkDestroySemaphore(app.core.device, app.framedata.render_semaphore, NULL);
-    vkDestroyFence(app.core.device, app.framedata.fence, NULL);
-    vkFreeCommandBuffers(app.core.device, app.rendering.command_pool, 1, &app.framedata.command_buffer);
-    // rendering default objects
-    for (int32_t i = 1; i < app.resource.max_image_texture_num; ++i) {
+    for (uint32_t i = 0; i < app.rendering.images_cnt; ++i) {
+        vkDestroySemaphore(app.core.device, app.frame_datas[i].semaphore, NULL);
+        vkDestroyFence(app.core.device, app.frame_datas[i].fence, NULL);
+        vkFreeCommandBuffers(app.core.device, app.rendering.command_pool, 1, &app.frame_datas[i].command_buffer);
+    }
+    // rendering resource
+    for (int32_t i = 1; i < app.resource.max_image_texture_cnt; ++i) {
         unload_image(i);
     }
     unload_image(0);
