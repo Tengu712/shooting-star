@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CHECK(f, msg) if ((f) != 0) error((msg));
-#define WARN(f, msg) if ((f) != 0) return warning((msg));
+#define CHECK(f, msg) if ((f) != 0) fb_error((msg));
+#define WARN(f, msg) if ((f) != 0) return fb_warning((msg));
 
 // A struct for model buffer.
 typedef struct Model_t {

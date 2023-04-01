@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) error((p));
+#define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) fb_error((p));
 
 typedef struct {
     uint32_t flags;
@@ -30,17 +30,18 @@ void create_window_param(SkdWindowParam *out) {
 }
 
 warn_t create_window(const char *title, uint16_t width, uint16_t height) {
-    log_info("start initialize xcb window ...");
+    fb_info("start initialize xcb window ...");
+    fb_indent_logger();
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
-    if (xcb_connection_has_error(g_connection)) error("failed to get xcb connection.");
+    if (xcb_connection_has_fb_error(g_connection)) fb_error("failed to get xcb connection.");
     // screen
     const xcb_setup_t *setup = xcb_get_setup(g_connection);
-    if (setup == NULL) error("failed to get xcb setup.");
+    if (setup == NULL) fb_error("failed to get xcb setup.");
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
     xcb_screen_t *screen = iter.data;
-    if (screen == NULL) error("failed to get screen.");
+    if (screen == NULL) fb_error("failed to get screen.");
     // window
     const uint32_t value_list[1] = {
         XCB_EVENT_MASK_EXPOSURE,
@@ -113,7 +114,8 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     // finish
     xcb_map_window(g_connection, g_window);
     xcb_flush(g_connection);
-    log_info("succeeded to initialize xcb window.");
+    fb_dedent_logger();
+    fb_info("succeeded to initialize xcb window.");
     return FB_SUCCESS;
 }
 

@@ -4,8 +4,9 @@
 #include "../vulkan.h"
 
 EXPORT warn_t fb_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num) {
-    log_info("Fireball 0.1.0");
-    log_info("initializing Fireball ...");
+    fb_info("Fireball 0.1.0");
+    fb_info("initializing Fireball ...");
+    fb_indent_logger();
 
     warn_t res = FB_SUCCESS;
     SkdWindowParam window_param;
@@ -14,15 +15,16 @@ EXPORT warn_t fb_init(const char *title, uint16_t width, uint16_t height, uint32
     create_window_param(&window_param);
     if (init_vulkan(&window_param, max_image_num) != FB_SUCCESS) res = FB_WARN;
 
-    log_info("Fireball initialization completed.");
+    fb_dedent_logger();
+    fb_info("Fireball initialization completed.");
     return res;
 }
 
 EXPORT void fb_terminate() {
-    log_info("terminating Fireball ...");
+    fb_info("terminating Fireball ...");
     terminate_vulkan();
     terminate_window();
-    log_info("Fireball termination completed.");
+    fb_info("Fireball termination completed.");
 }
 
 EXPORT warn_t fb_should_close() {

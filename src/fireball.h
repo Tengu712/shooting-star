@@ -17,11 +17,13 @@ typedef int warn_t;
 #define FB_WARN 0
 #define FB_SUCCESS 1
 
-EXPORT warn_t init_logger(void);
-EXPORT void error(const char *msg);
-EXPORT warn_t warning(const char *msg);
-EXPORT void log_info(const char *msg);
-EXPORT void log_debug(const char *format, ...);
+EXPORT warn_t fb_init_logger(void);
+EXPORT void fb_indent_logger(void);
+EXPORT void fb_dedent_logger(void);
+EXPORT void fb_error(const char *msg);
+EXPORT warn_t fb_warning(const char *msg);
+EXPORT void fb_info(const char *msg);
+EXPORT void fb_debug(const char *format, ...);
 
 // ================================================================================================================= //
 //     Fireball                                                                                                      //
