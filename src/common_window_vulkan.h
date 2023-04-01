@@ -5,7 +5,7 @@
 #define SKD_WIN_KIND_XCB 0
 #define SKD_WIN_KIND_WINAPI 1
 
-// A union as an interface for skd_init_vulkan().
+// A union as an interface for init_vulkan().
 typedef struct {
     int32_t kind;
     union {

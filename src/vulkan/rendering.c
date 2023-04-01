@@ -2,7 +2,7 @@
 
 extern VulkanApp app;
 
-warn_t skd_prepare_rendering(uint32_t *p_id) {
+warn_t prepare_rendering(uint32_t *p_id) {
     // get aquire image index
     uint32_t next_image_idx;
     WARN(
@@ -27,7 +27,7 @@ warn_t skd_prepare_rendering(uint32_t *p_id) {
     return SUCCESS;
 }
 
-warn_t skd_begin_render(uint32_t id, float r, float g, float b) {
+warn_t begin_render(uint32_t id, float r, float g, float b) {
     // begin command buffer
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkCommandBufferBeginInfo command_buffer_begin_info = {
@@ -71,7 +71,7 @@ warn_t skd_begin_render(uint32_t id, float r, float g, float b) {
     return SUCCESS;
 }
 
-warn_t skd_end_render(uint32_t id) {
+warn_t end_render(uint32_t id) {
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkFence fence = app.framedata.fence;
     // end
@@ -108,7 +108,7 @@ warn_t skd_end_render(uint32_t id) {
     return SUCCESS;
 }
 
-void skd_draw(ModelData *data) {
+void draw(ModelData *data) {
     const VkCommandBuffer command = app.framedata.command_buffer;
     if (data != NULL) {
         vkCmdPushConstants(command, app.pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelData), data);

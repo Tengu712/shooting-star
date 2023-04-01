@@ -23,13 +23,13 @@ static xcb_connection_t *g_connection;
 static xcb_window_t g_window;
 static xcb_intern_atom_reply_t *g_atom_delete_window;
 
-void skd_create_window_param(SkdWindowParam *out) {
+void create_window_param(SkdWindowParam *out) {
     out->kind = SKD_WIN_KIND_XCB;
     out->data.xcb_window.connection = g_connection;
     out->data.xcb_window.window = g_window;
 }
 
-warn_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
+warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     log_info("start initialize xcb window ...");
     xcb_void_cookie_t res;
     // X
@@ -117,7 +117,7 @@ warn_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
     return SUCCESS;
 }
 
-int32_t skd_do_window_events(void) {
+int32_t do_window_events(void) {
     while (1) {
         xcb_generic_event_t* event = xcb_poll_for_event(g_connection);
         if (event == NULL) {
@@ -136,7 +136,7 @@ int32_t skd_do_window_events(void) {
     }
 }
 
-void skd_terminate_window(void) {
+void terminate_window(void) {
     if (g_connection == NULL) {
         return;
     }

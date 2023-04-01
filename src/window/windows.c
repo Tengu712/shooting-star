@@ -15,13 +15,13 @@ static LRESULT WINAPI WindowProcedure(HWND hwnd, uint32_t msg, WPARAM wparam, LP
     return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
-void skd_create_window_param(SkdWindowParam *out) {
+void create_window_param(SkdWindowParam *out) {
     out->kind = SKD_WIN_KIND_WINAPI;
     out->data.winapi_window.hinst = (void *)g_hinst;
     out->data.winapi_window.hwnd = (void *)g_hwnd;
 }
 
-warn_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
+warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     log_info("start to initialize win32 window ...");
     // instance handle
     g_hinst = GetModuleHandle(NULL);
@@ -70,7 +70,7 @@ warn_t skd_create_window(const char *title, uint16_t width, uint16_t height) {
     return 0;
 }
 
-int32_t skd_do_window_events(void) {
+int32_t do_window_events(void) {
     MSG msg;
     while (1) {
         if (PeekMessageW(&msg, NULL, 0U, 0U, PM_REMOVE)) {
@@ -85,7 +85,7 @@ int32_t skd_do_window_events(void) {
     }
 }
 
-void skd_terminate_window(void) {
+void terminate_window(void) {
     UnregisterClassW(L"WIN32APIWINDOW", g_hinst);
     DestroyWindow(g_hwnd);
 }

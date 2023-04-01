@@ -161,7 +161,7 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
     return SUCCESS;
 }
 
-warn_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
+warn_t load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
     if (out_id == NULL) return warning("tried to output image texture id to null.");
     int32_t id;
     for (id = 0; id < app.resource.max_image_texture_num; ++id) {
@@ -195,19 +195,19 @@ warn_t skd_load_image_from_memory(const unsigned char *pixels, int32_t width, in
     return SUCCESS;
 }
 
-warn_t skd_load_image_from_file(const char *path, uint32_t *out_id) {
+warn_t load_image_from_file(const char *path, uint32_t *out_id) {
     int32_t width = 0;
     int32_t height = 0;
     int32_t channel_cnt = 0;
     unsigned char *pixels = stbi_load(path, &width, &height, &channel_cnt, 0);
     if (pixels == NULL) return warning("failed to load image file."); // TODO: log file name
     if (channel_cnt != 4) return warning("tried to create image texture from invalid color format image file."); // TODO: log file name
-    const warn_t res = skd_load_image_from_memory(pixels, width, height, out_id);
+    const warn_t res = load_image_from_memory(pixels, width, height, out_id);
     stbi_image_free((void *)pixels);
     return res;
 }
 
-void skd_unload_image(uint32_t id) {
+void unload_image(uint32_t id) {
     if (id >= app.resource.max_image_texture_num || app.resource.image_textures[id].view == NULL) return;
     vkDeviceWaitIdle(app.core.device);
     // detach from descriptor set

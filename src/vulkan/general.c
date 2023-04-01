@@ -15,7 +15,7 @@ extern int32_t shader_frag_size;
 
 VulkanApp app;
 
-warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
+warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
     log_info("start to initialize Vulkan ...");
 
     warn_t res = SUCCESS;
@@ -678,7 +678,7 @@ warn_t skd_init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_
     return res;
 }
 
-void skd_terminate_vulkan(void) {
+void terminate_vulkan(void) {
     vkDeviceWaitIdle(app.core.device);
     // frame data
     vkDestroySemaphore(app.core.device, app.framedata.present_semaphore, NULL);
@@ -687,9 +687,9 @@ void skd_terminate_vulkan(void) {
     vkFreeCommandBuffers(app.core.device, app.rendering.command_pool, 1, &app.framedata.command_buffer);
     // rendering default objects
     for (int32_t i = 1; i < app.resource.max_image_texture_num; ++i) {
-        skd_unload_image(i);
+        unload_image(i);
     }
-    skd_unload_image(0);
+    unload_image(0);
     vkFreeMemory(app.core.device, app.resource.camera.buffer_memory, NULL);
     vkDestroyBuffer(app.core.device, app.resource.camera.buffer, NULL);
     vkFreeMemory(app.core.device, app.resource.square.vertex_buffer_memory, NULL);
