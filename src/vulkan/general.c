@@ -15,7 +15,7 @@ extern int32_t shader_frag_size;
 
 VulkanApp app;
 
-warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
+warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_texture_num) {
     fb_info("start to initialize Vulkan ...");
     fb_indent_logger();
 
@@ -567,7 +567,12 @@ warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num)
     app.resource.descriptor_sets = (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * app.resource.max_descriptor_set_num);
 
     // camera
-    const CameraData default_camera_data = DEFAULT_CAMERA_DATA;
+    const CameraData default_camera_data =  {
+        { 0.0f, 0.0f, 0.0f },
+        { 0.0f, 0.0f, 0.0f },
+        { 1.0f, 1.0f, 1.0f },
+        { 45.0f, 1.0f, 0.0f, 1.0f },
+    };
     if (create_buffer(
             &app,
             sizeof(CameraData),

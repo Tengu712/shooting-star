@@ -2,7 +2,7 @@
 
 extern VulkanApp app;
 
-warn_t update_camera(CameraData *cameradata) {
+warn_t update_camera(const CameraData *cameradata) {
     if (!map_memory(&app, app.resource.camera.buffer_memory, (void *)cameradata, sizeof(CameraData)))
         return fb_warning("failed to map camera data.");
     else

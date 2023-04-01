@@ -5,88 +5,11 @@
 #include <stdint.h>
 
 // ================================================================================================================= //
-//         Structs                                                                                                   //
-// ================================================================================================================= //
-
-typedef struct Vec3_t {
-    float x;
-    float y;
-    float z;
-} Vec3;
-
-typedef struct Vec4_t {
-    float x;
-    float y;
-    float z;
-    float w;
-} Vec4;
-
-typedef struct Mat4_t {
-    float a11;
-    float a21;
-    float a31;
-    float a41;
-    float a12;
-    float a22;
-    float a32;
-    float a42;
-    float a13;
-    float a23;
-    float a33;
-    float a43;
-    float a14;
-    float a24;
-    float a34;
-    float a44;
-} Mat4;
-
-typedef struct ModelData_t {
-    Vec4 scl;
-    Vec4 rot;
-    Vec4 trs;
-    Vec4 col;
-    Vec4 uv;
-    Vec4 param;
-} ModelData;
-
-typedef struct CameraData_t {
-    Vec3 view_pos;
-    Vec3 view_rot;
-    struct Ortho {
-        float width;
-        float height;
-        float depth;
-    } ortho;
-    struct Perse {
-        float pov;
-        float aspect;
-        float near;
-        float far;
-    } perse;
-} CameraData;
-
-#define DEFAULT_MODEL_DATA { \
-        { 1.0f, 1.0f, 1.0f, 0.0f }, \
-        { 0.0f, 0.0f, 0.0f, 0.0f }, \
-        { 0.0f, 0.0f, 0.0f, 0.0f }, \
-        { 1.0f, 1.0f, 1.0f, 1.0f }, \
-        { 0.0f, 0.0f, 1.0f, 1.0f }, \
-        { 0.0f, 0.0f, 0.0f, 0.0f }, \
-    }
-
-#define DEFAULT_CAMERA_DATA { \
-        { 0.0f, 0.0f, 0.0f }, \
-        { 0.0f, 0.0f, 0.0f }, \
-        { 1.0f, 1.0f, 1.0f }, \
-        { 45.0f, 1.0f, 0.0f, 1.0f }, \
-    }
-
-// ================================================================================================================= //
 //         General                                                                                                   //
 // ================================================================================================================= //
 
 // A function to initialize Vulkan.
-warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_num);
+warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_num);
 
 // A terminator function.
 void terminate_vulkan(void);
@@ -106,7 +29,7 @@ warn_t begin_render(uint32_t id, float r, float g, float b);
 warn_t end_render(uint32_t id);
 
 // A function to draw.
-void draw(ModelData *data);
+void draw(const ModelData *data);
 
 // ================================================================================================================= //
 //         Image                                                                                                     //
@@ -132,7 +55,7 @@ void unload_image(uint32_t id);
 // A function to update camera.
 // It overwrites camera uniform buffer data,
 // so you should call it once before rendering.
-warn_t update_camera(CameraData *cameradata);
+warn_t update_camera(const CameraData *cameradata);
 
 // A function to use image texture.
 warn_t use_image_texture(uint32_t id);

@@ -29,6 +29,59 @@ EXPORT void fb_debug(const char *format, ...);
 //     Fireball                                                                                                      //
 // ================================================================================================================= //
 
+typedef struct Vec3_t {
+    float x;
+    float y;
+    float z;
+} Vec3;
+
+typedef struct Vec4_t {
+    float x;
+    float y;
+    float z;
+    float w;
+} Vec4;
+
+typedef struct ModelData_t {
+    Vec4 scl;
+    Vec4 rot;
+    Vec4 trs;
+    Vec4 col;
+    Vec4 uv;
+    Vec4 param;
+} ModelData;
+
+typedef struct CameraData_t {
+    Vec3 view_pos;
+    Vec3 view_rot;
+    struct Ortho {
+        float width;
+        float height;
+        float depth;
+    } ortho;
+    struct Perse {
+        float pov;
+        float aspect;
+        float near;
+        float far;
+    } perse;
+} CameraData;
+
+typedef enum RenderingQueryType_t {
+    RENDERING_QUERY_TYPE_MODEL,
+    RENDERING_QUERY_TYPE_CAMERA,
+    RENDERING_QUERY_TYPE_IMAGE_TEXTURE,
+} RenderingQueryType;
+
+typedef struct RenderingQuery_t {
+    RenderingQueryType kind;
+    union {
+        ModelData model_data;
+        CameraData camera_data;
+        uint32_t image_texture_id;
+    } data;
+} RenderingQuery;
+
 // A function to initialize Fireball.
 // This parameters are:
 //   1. title: window title
@@ -38,15 +91,16 @@ EXPORT void fb_debug(const char *format, ...);
 EXPORT warn_t fb_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num);
 
 // A function to terminate Fireball.
-EXPORT void fb_terminate();
+EXPORT void fb_terminate(void);
 
 // A function to process window event and check if the app should be closed.
-EXPORT warn_t fb_should_close();
+EXPORT warn_t fb_should_close(void);
 
 // A function to render entities.
 // This parameters are:
 //   1. r: red for clearing the screen
 //   2. g: green for clearing the screen
 //   3. b: blue for clearing the screen
-// TODO:
-EXPORT warn_t fb_render(float r, float g, float b);
+//   4. query: query array for rendering operations
+//   5. count: the number of query array
+EXPORT warn_t fb_render(float r, float g, float b, const RenderingQuery *query, uint32_t count);

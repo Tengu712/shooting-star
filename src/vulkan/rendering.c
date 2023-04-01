@@ -108,7 +108,7 @@ warn_t end_render(uint32_t id) {
     return FB_SUCCESS;
 }
 
-void draw(ModelData *data) {
+void draw(const ModelData *data) {
     const VkCommandBuffer command = app.framedata.command_buffer;
     if (data != NULL) {
         vkCmdPushConstants(command, app.pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelData), data);
