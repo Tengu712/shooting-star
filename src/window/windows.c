@@ -16,7 +16,6 @@ static LRESULT WINAPI WindowProcedure(HWND hwnd, uint32_t msg, WPARAM wparam, LP
 }
 
 void create_window_param(WindowParam *out) {
-    out->kind = WINDOW_PARAM_TYPE_WIN32;
     out->data.winapi_window.hinst = (void *)g_hinst;
     out->data.winapi_window.hwnd = (void *)g_hwnd;
 }
