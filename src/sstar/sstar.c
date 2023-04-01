@@ -9,7 +9,7 @@ EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32
     ss_indent_logger();
 
     warn_t res = SS_SUCCESS;
-    SkdWindowParam window_param;
+    WindowParam window_param;
 
     if (create_window(title, width, height) != SS_SUCCESS) res = SS_WARN;
     create_window_param(&window_param);

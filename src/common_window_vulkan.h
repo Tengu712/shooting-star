@@ -18,4 +18,4 @@ typedef struct {
             void *hwnd;
         } winapi_window;
     } data;
-} SkdWindowParam;
+} WindowParam;

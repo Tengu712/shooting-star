@@ -10,7 +10,7 @@
 // ================================================================================================================= //
 
 // A function to create window param based on each implementation.
-void create_window_param(SkdWindowParam *out);
+void create_window_param(WindowParam *out);
 
 // A function to create a window.
 warn_t create_window(const char *title, uint16_t width, uint16_t height);

@@ -23,7 +23,7 @@ static xcb_connection_t *g_connection;
 static xcb_window_t g_window;
 static xcb_intern_atom_reply_t *g_atom_delete_window;
 
-void create_window_param(SkdWindowParam *out) {
+void create_window_param(WindowParam *out) {
     out->kind = SKD_WIN_KIND_XCB;
     out->data.xcb_window.connection = g_connection;
     out->data.xcb_window.window = g_window;

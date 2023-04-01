@@ -9,7 +9,7 @@
 // ================================================================================================================= //
 
 // A function to initialize Vulkan.
-warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_num);
+warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_num);
 
 // A terminator function.
 void terminate_vulkan(void);
