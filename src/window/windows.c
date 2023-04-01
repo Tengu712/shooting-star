@@ -1,17 +1,12 @@
-#include "window.h"
+#include "../window.h"
 
 #include <windows.h>
 #include <stdlib.h>
-#include <stdio.h>
 
-#define EMSG_REGISTER_WNDCLASS 1
-#define EMSG_CONVERT_WTITLE 2
-#define EMSG_CREATE_WINDOW 3
+static HINSTANCE g_hinst;
+static HWND g_hwnd;
 
-HINSTANCE g_hinst;
-HWND g_hwnd;
-
-LRESULT WINAPI WindowProcedure(HWND hwnd, unsigned int msg, WPARAM wparam, LPARAM lparam) {
+static LRESULT WINAPI WindowProcedure(HWND hwnd, uint32_t msg, WPARAM wparam, LPARAM lparam) {
     switch (msg) {
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -20,29 +15,19 @@ LRESULT WINAPI WindowProcedure(HWND hwnd, unsigned int msg, WPARAM wparam, LPARA
     return DefWindowProcW(hwnd, msg, wparam, lparam);
 }
 
-void skd_create_window_param(SkdWindowParam *out) {
+void create_window_param(SkdWindowParam *out) {
     out->kind = SKD_WIN_KIND_WINAPI;
     out->data.winapi_window.hinst = (void *)g_hinst;
     out->data.winapi_window.hwnd = (void *)g_hwnd;
 }
 
-const char *skd_get_window_error_message(int res) {
-    switch (res) {
-        case EMSG_REGISTER_WNDCLASS:
-            return "failed to register window class";
-        case EMSG_CREATE_WINDOW:
-            return "failed to create a window";
-        default:
-            return "unexpected";
-    }
-}
-
-int skd_create_window(const char *title, unsigned short width, unsigned short height) {
+warn_t create_window(const char *title, uint16_t width, uint16_t height) {
+    log_info("start to initialize win32 window ...");
     // instance handle
     g_hinst = GetModuleHandle(NULL);
     // window class
     const DWORD style = WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX;
-    WNDCLASSEXW wc = {
+    const WNDCLASSEXW wc = {
         sizeof(WNDCLASSEXW),
         CS_CLASSDC,
         WindowProcedure,
@@ -56,18 +41,13 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         L"WIN32APIWINDOW",
         NULL,
     };
-    if (!RegisterClassExW(&wc)) {
-        return EMSG_REGISTER_WNDCLASS;
-    }
+    if (!RegisterClassExW(&wc)) error("failed to register window class.");
     // adjust window size
     RECT rect = { 0, 0, (long)width, (long)height };
     AdjustWindowRectEx(&rect, style, 0, 0);
     // window
-    const size_t titlelen = _mbstrlen(title);
     wchar_t wtitle[256] = {};
-    if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) {
-        return EMSG_CONVERT_WTITLE;
-    }
+    if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) error("failed to convert title multibyte to wide.");
     g_hwnd = CreateWindowExW(
         0,
         L"WIN32APIWINDOW",
@@ -82,16 +62,15 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         g_hinst,
         NULL
     );
-    if (!g_hwnd) {
-        return EMSG_CREATE_WINDOW;
-    }
+    if (!g_hwnd) error("failed to create window.");
     // finish
     ShowWindow(g_hwnd, SW_SHOWDEFAULT);
     UpdateWindow(g_hwnd);
+    log_info("succeeded to initialize win32 window.");
     return 0;
 }
 
-int skd_do_window_events(void) {
+int32_t do_window_events(void) {
     MSG msg;
     while (1) {
         if (PeekMessageW(&msg, NULL, 0U, 0U, PM_REMOVE)) {
@@ -106,7 +85,7 @@ int skd_do_window_events(void) {
     }
 }
 
-void skd_terminate_window(void) {
+void terminate_window(void) {
     UnregisterClassW(L"WIN32APIWINDOW", g_hinst);
     DestroyWindow(g_hwnd);
 }

@@ -1,15 +1,10 @@
+#include "../window.h"
+
 #include <xcb/xcb.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "window.h"
-
-#define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) return (p);
-#define EMSG_CONNECT_X 1
-#define EMSG_GET_SETUP 2
-#define EMSG_GET_SCREEN 3
-#define EMSG_CREATE_WINDOW 4
-#define EMSG_CHANGE_PROPERTY 5
+#define CHECK(p) if (xcb_request_check(g_connection, res) != NULL) error((p));
 
 typedef struct {
     uint32_t flags;
@@ -24,50 +19,28 @@ typedef struct {
     uint32_t win_gravity;
 } XSizeHints;
 
-xcb_connection_t *g_connection;
-xcb_window_t g_window;
-xcb_intern_atom_reply_t *g_atom_delete_window;
+static xcb_connection_t *g_connection;
+static xcb_window_t g_window;
+static xcb_intern_atom_reply_t *g_atom_delete_window;
 
-void skd_create_window_param(SkdWindowParam *out) {
+void create_window_param(SkdWindowParam *out) {
     out->kind = SKD_WIN_KIND_XCB;
     out->data.xcb_window.connection = g_connection;
     out->data.xcb_window.window = g_window;
 }
 
-const char *skd_get_window_error_message(int res) {
-    switch (res) {
-        case EMSG_CONNECT_X:
-            return "failed to connect with X server";
-        case EMSG_GET_SETUP:
-            return "failed to get a setup";
-        case EMSG_GET_SCREEN:
-            return "failed to get a screen";
-        case EMSG_CREATE_WINDOW:
-            return "failed to create a window";
-        case EMSG_CHANGE_PROPERTY:
-            return "failed to change window property";
-        default:
-            return "unexpected";
-    }
-}
-
-int skd_create_window(const char *title, unsigned short width, unsigned short height) {
+warn_t create_window(const char *title, uint16_t width, uint16_t height) {
+    log_info("start initialize xcb window ...");
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
-    if (xcb_connection_has_error(g_connection)) {
-        return EMSG_CONNECT_X;
-    }
+    if (xcb_connection_has_error(g_connection)) error("failed to get xcb connection.");
     // screen
     const xcb_setup_t *setup = xcb_get_setup(g_connection);
-    if (setup == NULL) {
-        return EMSG_GET_SETUP;
-    }
+    if (setup == NULL) error("failed to get xcb setup.");
     xcb_screen_iterator_t iter = xcb_setup_roots_iterator(setup);
     xcb_screen_t *screen = iter.data;
-    if (screen == NULL) {
-        return EMSG_GET_SCREEN;
-    }
+    if (screen == NULL) error("failed to get screen.");
     // window
     const uint32_t value_list[1] = {
         XCB_EVENT_MASK_EXPOSURE,
@@ -88,7 +61,7 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         XCB_CW_EVENT_MASK,
         value_list
     );
-    CHECK(EMSG_CREATE_WINDOW);
+    CHECK("failed to create xcb window.");
     // title
     res = xcb_change_property(
         g_connection,
@@ -100,15 +73,15 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         strlen(title),
         title
     );
-    CHECK(EMSG_CHANGE_PROPERTY);
+    CHECK("failed to change window title.");
     // disable resize
     XSizeHints size_hints;
     memset(&size_hints, 0, sizeof(XSizeHints));
     size_hints.flags = (1 << 4) | (1 << 5);
-    size_hints.max_width = (int)width;
-    size_hints.min_width = (int)width;
-    size_hints.max_height = (int)height;
-    size_hints.min_height = (int)height;
+    size_hints.max_width = (int32_t)width;
+    size_hints.min_width = (int32_t)width;
+    size_hints.max_height = (int32_t)height;
+    size_hints.min_height = (int32_t)height;
     res = xcb_change_property(
         g_connection,
         XCB_PROP_MODE_REPLACE,
@@ -119,16 +92,12 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         sizeof(XSizeHints) >> 2,
         &size_hints
     );
-    CHECK(EMSG_CHANGE_PROPERTY);
+    CHECK("failed to make window unresizable.");
     // event
-    xcb_intern_atom_cookie_t cookie_protocols =
-        xcb_intern_atom(g_connection, 1, 12, "WM_PROTOCOLS");
-    xcb_intern_atom_reply_t *atom_protocols =
-        xcb_intern_atom_reply(g_connection, cookie_protocols, 0);
-    xcb_intern_atom_cookie_t cookie_delete_window =
-        xcb_intern_atom(g_connection, 0, 16, "WM_DELETE_WINDOW");
-    g_atom_delete_window =
-        xcb_intern_atom_reply(g_connection, cookie_delete_window, 0);
+    xcb_intern_atom_cookie_t cookie_protocols = xcb_intern_atom(g_connection, 1, 12, "WM_PROTOCOLS");
+    xcb_intern_atom_reply_t *atom_protocols = xcb_intern_atom_reply(g_connection, cookie_protocols, 0);
+    xcb_intern_atom_cookie_t cookie_delete_window = xcb_intern_atom(g_connection, 0, 16, "WM_DELETE_WINDOW");
+    g_atom_delete_window = xcb_intern_atom_reply(g_connection, cookie_delete_window, 0);
     res = xcb_change_property(
         g_connection,
         XCB_PROP_MODE_REPLACE,
@@ -139,15 +108,16 @@ int skd_create_window(const char *title, unsigned short width, unsigned short he
         1,
         &g_atom_delete_window->atom
     );
-    CHECK(EMSG_CHANGE_PROPERTY);
+    CHECK("failed to make window close when exiting it.");
     free(atom_protocols);
     // finish
     xcb_map_window(g_connection, g_window);
     xcb_flush(g_connection);
-    return 0;
+    log_info("succeeded to initialize xcb window.");
+    return FB_SUCCESS;
 }
 
-int skd_do_window_events(void) {
+int32_t do_window_events(void) {
     while (1) {
         xcb_generic_event_t* event = xcb_poll_for_event(g_connection);
         if (event == NULL) {
@@ -156,8 +126,7 @@ int skd_do_window_events(void) {
         }
         uint8_t response = event->response_type & ~0x80;
         if (response == XCB_CLIENT_MESSAGE) {
-            xcb_client_message_event_t *cme =
-                (xcb_client_message_event_t *)event;
+            xcb_client_message_event_t *cme = (xcb_client_message_event_t *)event;
             if (cme->data.data32[0] == g_atom_delete_window->atom) {
                 free(event);
                 return 1;
@@ -167,7 +136,7 @@ int skd_do_window_events(void) {
     }
 }
 
-void skd_terminate_window(void) {
+void terminate_window(void) {
     if (g_connection == NULL) {
         return;
     }

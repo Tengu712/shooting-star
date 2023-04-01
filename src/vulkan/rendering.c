@@ -1,41 +1,33 @@
-#include "vulkan_private.h"
+#include "private.h"
 
 extern VulkanApp app;
 
-int skd_prepare_rendering(unsigned int *p_id) {
-    VkResult res;
+warn_t prepare_rendering(uint32_t *p_id) {
     // get aquire image index
     uint32_t next_image_idx;
-    res = vkAcquireNextImageKHR(
-        app.device,
-        app.swapchain,
-        UINT64_MAX,
-        app.framedata.present_semaphore,
-        VK_NULL_HANDLE,
-        &next_image_idx
+    WARN(
+        vkAcquireNextImageKHR(
+            app.core.device,
+            app.rendering.swapchain,
+            UINT64_MAX,
+            app.framedata.present_semaphore,
+            VK_NULL_HANDLE,
+            &next_image_idx
+        ),
+        "failed to get next image index."
     );
-    CHECK(0);
     // wait for a fence
     const VkFence fence = app.framedata.fence;
-    res = vkWaitForFences(
-        app.device,
-        1,
-        &fence,
-        VK_TRUE,
-        UINT64_MAX
-    );
-    CHECK(0);
+    if (vkWaitForFences(app.core.device, 1, &fence, VK_TRUE, UINT64_MAX) != 0) warning("failed to wait for fence.");
     // reset fences
-    res = vkResetFences(app.device, 1, &fence);
-    CHECK(0);
+    if (vkResetFences(app.core.device, 1, &fence) != 0) warning("failed to reset fence.");
     // TODO: reset command buffer?
     // finish
     *p_id = next_image_idx;
-    return 1;
+    return FB_SUCCESS;
 }
 
-int skd_begin_render(unsigned int id, float r, float g, float b) {
-    VkResult res;
+warn_t begin_render(uint32_t id, float r, float g, float b) {
     // begin command buffer
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkCommandBufferBeginInfo command_buffer_begin_info = {
@@ -44,32 +36,27 @@ int skd_begin_render(unsigned int id, float r, float g, float b) {
         0,
         NULL,
     };
-    res = vkBeginCommandBuffer(command, &command_buffer_begin_info);
-    CHECK(0);
+    WARN(vkBeginCommandBuffer(command, &command_buffer_begin_info), "failed to begin record commands to render.");
     // begin render pass
-    const VkClearValue clear_value = { r, g, b, 0.0f };
-    const VkExtent2D extent = { app.width, app.height };
+    const VkClearValue clear_value = {{{ r, g, b, 0.0f }}};
+    const VkExtent2D extent = { app.rendering.width, app.rendering.height };
     const VkRenderPassBeginInfo render_pass_begin_info = {
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         NULL,
-        app.render_pass,
-        app.framebuffers[id],
+        app.pipeline.render_pass,
+        app.pipeline.framebuffers[id],
         { {0, 0}, extent },
         1,
         &clear_value,
     };
-    vkCmdBeginRenderPass(
-        command,
-        &render_pass_begin_info,
-        VK_SUBPASS_CONTENTS_INLINE
-    );
+    vkCmdBeginRenderPass(command, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
     // bind pipeline
-    vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, app.pipeline);
+    vkCmdBindPipeline(command, VK_PIPELINE_BIND_POINT_GRAPHICS, app.pipeline.pipeline);
     // bind descriptor
     vkCmdBindDescriptorSets(
         command,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
-        app.pipeline_layout,
+        app.pipeline.pipeline_layout,
         0,
         1,
         &app.resource.descriptor_sets[0],
@@ -79,26 +66,19 @@ int skd_begin_render(unsigned int id, float r, float g, float b) {
     // bind square
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(command, 0, 1, &app.resource.square.vertex_buffer, &offset);
-    vkCmdBindIndexBuffer(
-        command,
-        app.resource.square.index_buffer,
-        offset,
-        VK_INDEX_TYPE_UINT32
-    );
+    vkCmdBindIndexBuffer(command, app.resource.square.index_buffer, offset, VK_INDEX_TYPE_UINT32);
     // finish
-    return 1;
+    return FB_SUCCESS;
 }
 
-int skd_end_render(unsigned int id) {
-    VkResult res;
+warn_t end_render(uint32_t id) {
     const VkCommandBuffer command = app.framedata.command_buffer;
     const VkFence fence = app.framedata.fence;
     // end
     vkCmdEndRenderPass(command);
     vkEndCommandBuffer(command);
     // submit
-    const VkPipelineStageFlags wait_stage_mask =
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    const VkPipelineStageFlags wait_stage_mask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     const VkSubmitInfo submit_info = {
         VK_STRUCTURE_TYPE_SUBMIT_INFO,
         NULL,
@@ -110,36 +90,28 @@ int skd_end_render(unsigned int id) {
         1,
         &app.framedata.render_semaphore,
     };
-    res = vkQueueSubmit(app.queue, 1, &submit_info, fence);
-    CHECK(0);
+    WARN(vkQueueSubmit(app.rendering.queue, 1, &submit_info, fence), "failed to submit queue to render.");
     // present
+    VkResult res;
     VkPresentInfoKHR present_info = {
         VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         NULL,
         1,
         &app.framedata.render_semaphore,
         1,
-        &app.swapchain,
+        &app.rendering.swapchain,
         &id,
         &res,
     };
-    res = vkQueuePresentKHR(app.queue, &present_info);
-    CHECK(0);
+    WARN(vkQueuePresentKHR(app.rendering.queue, &present_info), "failed to enqueue present command.");
     // finish
-    return 1;
+    return FB_SUCCESS;
 }
 
-void skd_draw(ModelData *data) {
+void draw(ModelData *data) {
     const VkCommandBuffer command = app.framedata.command_buffer;
     if (data != NULL) {
-        vkCmdPushConstants(
-            command,
-            app.pipeline_layout,
-            VK_SHADER_STAGE_VERTEX_BIT,
-            0,
-            sizeof(ModelData),
-            data
-        );
+        vkCmdPushConstants(command, app.pipeline.pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ModelData), data);
     }
     vkCmdDrawIndexed(command, app.resource.square.index_cnt, 1, 0, 0, 0);
 }
