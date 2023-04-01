@@ -2,12 +2,14 @@
 
 #include <stdint.h>
 
-#define SKD_WIN_KIND_XCB 0
-#define SKD_WIN_KIND_WINAPI 1
+typedef enum WindowParamType_t {
+    WINDOW_PARAM_TYPE_XCB,
+    WINDOW_PARAM_TYPE_WIN32,
+} WindowParamType;
 
 // A union as an interface for init_vulkan().
 typedef struct {
-    int32_t kind;
+    WindowParamType kind;
     union {
         struct {
             void *connection;
