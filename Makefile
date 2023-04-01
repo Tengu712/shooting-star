@@ -15,22 +15,22 @@ sstar_dependencies = \
 window_dependencies = src/sstar.h src/common_window_vulkan.h src/window.h
 vulkan_dependencies = src/sstar.h src/common_window_vulkan.h src/vulkan.h src/vulkan/private.h
 
-linux:		$(sstar_dependencies) tmp/window/linux.o
+linux:		$(sstar_dependencies) tmp/window/linux.o exh2imh/exh2imh
 	gcc -Wall -shared -fvisibility=hidden -o build/sstar.so \
 	  $(sstar_dependencies) \
 	  tmp/window/linux.o \
 	  -lm \
 	  -lxcb \
 	  -lvulkan
-	cp src/sstar.h build/sstar.h
+	./exh2imh/exh2imh src/sstar.h build/sstar.h
 	cp build/sstar.h sample/sstar.h
 	cp build/sstar.so sample/sstar.so
-windows:	$(sstar_dependencies) tmp/window/windows.o
+windows:	$(sstar_dependencies) tmp/window/windows.o exh2imh/exh2imh
 	gcc -Wall -shared -o build/sstar.dll \
 	  $(sstar_dependencies) \
 	  tmp/window/windows.o \
 	  -lvulkan-1
-	copy src\sstar.h build\sstar.h > nul
+	./exh2imh/exh2imh src/sstar.h build/sstar.h
 	copy build\sstar.h sample\sstar.h > nul
 	copy build\sstar.dll sample\sstar.dll > nul
 
@@ -64,6 +64,8 @@ tmp/shader.frag.o:	bin2c/bin2c src/shader.frag
 
 bin2c/bin2c:	bin2c/bin2c.rs
 	rustc -o bin2c/bin2c bin2c/bin2c.rs
+exh2imh/exh2imh:	exh2imh/exh2imh.rs
+	rustc -o exh2imh/exh2imh exh2imh/exh2imh.rs
 
 clean_linux:
 	rm -rf sstar bin2c/bin2c build tmp sample/sstar.h sample/sstar.so
