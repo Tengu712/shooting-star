@@ -18,7 +18,7 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             &staging_buffer,
-            &staging_buffer_memory) != SUCCESS)
+            &staging_buffer_memory) != FB_SUCCESS)
     {
         return warning("failed to create buffer for image texture.");
     }
@@ -158,7 +158,7 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
     vkFreeCommandBuffers(app.core.device, app.rendering.command_pool, 1, &command);
     vkFreeMemory(app.core.device, staging_buffer_memory, NULL);
     vkDestroyBuffer(app.core.device, staging_buffer, NULL);
-    return SUCCESS;
+    return FB_SUCCESS;
 }
 
 warn_t load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
@@ -169,7 +169,7 @@ warn_t load_image_from_memory(const unsigned char *pixels, int32_t width, int32_
     }
     if (id >= app.resource.max_image_texture_num) return warning("tried to too many image textures.");
     // load image
-    if (load_image_texture(pixels, width, height, id) != SUCCESS) return WARNING;
+    if (load_image_texture(pixels, width, height, id) != FB_SUCCESS) return FB_WARN;
     // register image texture to descriptor set
     // HACK: should i move this part into descriptor_sets.c?
     VkDescriptorImageInfo sampler_descriptor_image_info = {
@@ -192,7 +192,7 @@ warn_t load_image_from_memory(const unsigned char *pixels, int32_t width, int32_
     vkUpdateDescriptorSets(app.core.device, 1, &write_descriptor_set, 0, NULL);
     // finish
     *out_id = id;
-    return SUCCESS;
+    return FB_SUCCESS;
 }
 
 warn_t load_image_from_file(const char *path, uint32_t *out_id) {

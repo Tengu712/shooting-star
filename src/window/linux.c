@@ -114,7 +114,7 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     xcb_map_window(g_connection, g_window);
     xcb_flush(g_connection);
     log_info("succeeded to initialize xcb window.");
-    return SUCCESS;
+    return FB_SUCCESS;
 }
 
 int32_t do_window_events(void) {

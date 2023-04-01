@@ -18,7 +18,7 @@ VulkanApp app;
 warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num) {
     log_info("start to initialize Vulkan ...");
 
-    warn_t res = SUCCESS;
+    warn_t res = FB_SUCCESS;
     // NOTE: considering empty image
     const uint32_t max_image_texture_num_add_1 = max_image_texture_num + 1;
     // NOTE: as for Fireball the num of descriptor sets
@@ -573,7 +573,7 @@ warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num)
             VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             &app.resource.camera.buffer,
-            &app.resource.camera.buffer_memory) != SUCCESS)
+            &app.resource.camera.buffer_memory) != FB_SUCCESS)
     {
         error("failed to create buffer for camera.");
     }
@@ -586,7 +586,7 @@ warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num)
     app.resource.image_textures = (Image *)calloc(app.resource.max_image_texture_num, sizeof(Image));
     // empty image
     const unsigned char pixels[] = { 0xff, 0xff, 0xff, 0xff };
-    if (load_image_texture(pixels, 1, 1, 0) != SUCCESS) res = WARNING;
+    if (load_image_texture(pixels, 1, 1, 0) != FB_SUCCESS) res = FB_WARN;
 
     // descriptor sets #2
     for (int32_t i = 0; i < app.resource.max_descriptor_set_num; ++i) {
@@ -652,7 +652,7 @@ warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num)
             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             &app.resource.square.vertex_buffer,
-            &app.resource.square.vertex_buffer_memory) != SUCCESS)
+            &app.resource.square.vertex_buffer_memory) != FB_SUCCESS)
     {
         error("failed to create vertex buffer.");
     }
@@ -662,7 +662,7 @@ warn_t init_vulkan(SkdWindowParam *window_param, uint32_t max_image_texture_num)
             VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
             &app.resource.square.index_buffer,
-            &app.resource.square.index_buffer_memory) != SUCCESS)
+            &app.resource.square.index_buffer_memory) != FB_SUCCESS)
     {
         error("failed to create index buffer.");
     }

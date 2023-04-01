@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../error.h"
+#include "../fireball.h"
 #include "../vulkan.h"
 
 #ifdef __linux__

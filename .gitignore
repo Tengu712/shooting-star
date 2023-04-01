@@ -1,9 +1,10 @@
 /bin2c/bin2c
+/build/
 /tmp/
-fireball
 *.a
 *.o
 *.out
 *.exe
-*.png
+*.dll
 *.pdb
+*.png
