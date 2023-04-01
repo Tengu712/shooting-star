@@ -16,13 +16,13 @@ extern int32_t shader_frag_size;
 VulkanApp app;
 
 warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_texture_num) {
-    fb_info("start to initialize Vulkan ...");
-    fb_indent_logger();
+    ss_info("initializing Vulkan ...");
+    ss_indent_logger();
 
     warn_t res = FB_SUCCESS;
     // NOTE: considering empty image
     const uint32_t max_image_texture_num_add_1 = max_image_texture_num + 1;
-    // NOTE: as for Fireball the num of descriptor sets
+    // NOTE: as for Shooting Star the num of descriptor sets
     // NOTE: is the same as that of image texture.
     const uint32_t max_descriptor_set_num = max_image_texture_num_add_1;
 
@@ -84,7 +84,7 @@ warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_textur
             break;
         }
     }
-    if (queue_family_index == -1) fb_error("failed to find queue family index.");
+    if (queue_family_index == -1) ss_error("failed to find queue family index.");
     free(queue_family_props);
 
     // device
@@ -159,7 +159,7 @@ warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_textur
             break;
         }
     }
-    if (surface_format_index == -1) fb_error("failed to get surface format.");
+    if (surface_format_index == -1) ss_error("failed to get surface format.");
     const VkSurfaceFormatKHR surface_format = surface_formats[surface_format_index];
     VkSurfaceCapabilitiesKHR surface_capabilities;
     CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.rendering.surface, &surface_capabilities), "failed to get surface capabilities.");
@@ -581,10 +581,10 @@ warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_textur
             &app.resource.camera.buffer,
             &app.resource.camera.buffer_memory) != FB_SUCCESS)
     {
-        fb_error("failed to create buffer for camera.");
+        ss_error("failed to create buffer for camera.");
     }
     if (!map_memory(&app, app.resource.camera.buffer_memory, (void *)&default_camera_data, sizeof(CameraData))) {
-        res = fb_warning("failed to map camera data.");
+        res = ss_warning("failed to map camera data.");
     }
 
     // image textures
@@ -660,7 +660,7 @@ warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_textur
             &app.resource.square.vertex_buffer,
             &app.resource.square.vertex_buffer_memory) != FB_SUCCESS)
     {
-        fb_error("failed to create vertex buffer.");
+        ss_error("failed to create vertex buffer.");
     }
     if (create_buffer(
             &app,
@@ -670,18 +670,18 @@ warn_t init_vulkan(const SkdWindowParam *window_param, uint32_t max_image_textur
             &app.resource.square.index_buffer,
             &app.resource.square.index_buffer_memory) != FB_SUCCESS)
     {
-        fb_error("failed to create index buffer.");
+        ss_error("failed to create index buffer.");
     }
     if (!map_memory(&app, app.resource.square.vertex_buffer_memory, (void *)vtxs, sizeof(float) * 5 * 4)) {
-        res = fb_warning("failed to map vertex buffer.");
+        res = ss_warning("failed to map vertex buffer.");
     }
     if (!map_memory(&app, app.resource.square.index_buffer_memory, (void *)idxs, sizeof(uint32_t) * 6)) {
-        res = fb_warning("failed to map index buffer.");
+        res = ss_warning("failed to map index buffer.");
     }
 
     // finish
-    fb_dedent_logger();
-    fb_info("succeeded to initialize vulkan.");
+    ss_dedent_logger();
+    ss_info("vulkan initialization succeeded.");
     return res;
 }
 

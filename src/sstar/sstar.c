@@ -1,12 +1,12 @@
-#include "../fireball.h"
+#include "../sstar.h"
 
 #include "../window.h"
 #include "../vulkan.h"
 
-EXPORT warn_t fb_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num) {
-    fb_info("Fireball 0.1.0");
-    fb_info("initializing Fireball ...");
-    fb_indent_logger();
+EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num) {
+    ss_info("Shooting Star 0.1.0");
+    ss_info("initializing Shooting Star ...");
+    ss_indent_logger();
 
     warn_t res = FB_SUCCESS;
     SkdWindowParam window_param;
@@ -15,23 +15,23 @@ EXPORT warn_t fb_init(const char *title, uint16_t width, uint16_t height, uint32
     create_window_param(&window_param);
     if (init_vulkan(&window_param, max_image_num) != FB_SUCCESS) res = FB_WARN;
 
-    fb_dedent_logger();
-    fb_info("Fireball initialization completed.");
+    ss_dedent_logger();
+    ss_info("Shooting Star initialization completed.");
     return res;
 }
 
-EXPORT void fb_terminate() {
-    fb_info("terminating Fireball ...");
+EXPORT void ss_terminate() {
+    ss_info("terminating Shooting Star ...");
     terminate_vulkan();
     terminate_window();
-    fb_info("Fireball termination completed.");
+    ss_info("Shooting Star termination completed.");
 }
 
-EXPORT warn_t fb_should_close() {
+EXPORT warn_t ss_should_close() {
     return do_window_events();
 }
 
-EXPORT warn_t fb_render(float r, float g, float b, const RenderingQuery *query, uint32_t count) {
+EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, uint32_t count) {
     warn_t res = FB_SUCCESS;
     uint32_t id;
     if (prepare_rendering(&id) != FB_SUCCESS) res = FB_WARN;

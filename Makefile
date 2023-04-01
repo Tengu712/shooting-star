@@ -3,41 +3,41 @@
 .PHONY: clean_linux
 .PHONY: clean_windows
 
-fireball_dependencies = \
-    tmp/fireball/fireball.o \
-    tmp/fireball/logger.o \
+sstar_dependencies = \
+    tmp/sstar/sstar.o \
+    tmp/sstar/logger.o \
 	tmp/vulkan/general.o \
 	tmp/vulkan/rendering.o \
 	tmp/vulkan/image.o \
 	tmp/vulkan/descriptor_sets.o \
 	tmp/shader.vert.o \
 	tmp/shader.frag.o
-window_dependencies = src/fireball.h src/common_window_vulkan.h src/window.h
-vulkan_dependencies = src/fireball.h src/common_window_vulkan.h src/vulkan.h src/vulkan/private.h
+window_dependencies = src/sstar.h src/common_window_vulkan.h src/window.h
+vulkan_dependencies = src/sstar.h src/common_window_vulkan.h src/vulkan.h src/vulkan/private.h
 
-linux:		$(fireball_dependencies) tmp/window/linux.o
-	gcc -Wall -shared -fvisibility=hidden -o build/fireball.so \
-	  $(fireball_dependencies) \
+linux:		$(sstar_dependencies) tmp/window/linux.o
+	gcc -Wall -shared -fvisibility=hidden -o build/sstar.so \
+	  $(sstar_dependencies) \
 	  tmp/window/linux.o \
 	  -lm \
 	  -lxcb \
 	  -lvulkan
-	cp src/fireball.h build/fireball.h
-	cp build/fireball.h sample/fireball.h
-	cp build/fireball.so sample/fireball.so
-windows:	$(fireball_dependencies) tmp/window/windows.o
-	gcc -Wall -shared -o build/fireball.dll \
-	  $(fireball_dependencies) \
+	cp src/sstar.h build/sstar.h
+	cp build/sstar.h sample/sstar.h
+	cp build/sstar.so sample/sstar.so
+windows:	$(sstar_dependencies) tmp/window/windows.o
+	gcc -Wall -shared -o build/sstar.dll \
+	  $(sstar_dependencies) \
 	  tmp/window/windows.o \
 	  -lvulkan-1
-	copy src\fireball.h build\fireball.h > nul
-	copy build\fireball.h sample\fireball.h > nul
-	copy build\fireball.dll sample\fireball.dll > nul
+	copy src\sstar.h build\sstar.h > nul
+	copy build\sstar.h sample\sstar.h > nul
+	copy build\sstar.dll sample\sstar.dll > nul
 
-tmp/fireball/fireball.o:	src/fireball.h src/fireball/fireball.c
-	gcc -Wall -c -o tmp/fireball/fireball.o src/fireball/fireball.c
-tmp/fireball/logger.o:		src/fireball.h src/fireball/logger.c
-	gcc -Wall -c -o tmp/fireball/logger.o src/fireball/logger.c
+tmp/sstar/sstar.o:	src/sstar.h src/sstar/sstar.c
+	gcc -Wall -c -o tmp/sstar/sstar.o src/sstar/sstar.c
+tmp/sstar/logger.o:		src/sstar.h src/sstar/logger.c
+	gcc -Wall -c -o tmp/sstar/logger.o src/sstar/logger.c
 
 tmp/window/linux.o:		$(window_dependencies) src/window/linux.c
 	gcc -Wall -c -o tmp/window/linux.o src/window/linux.c
@@ -66,18 +66,18 @@ bin2c/bin2c:	bin2c/bin2c.rs
 	rustc -o bin2c/bin2c bin2c/bin2c.rs
 
 clean_linux:
-	rm -rf fireball bin2c/bin2c build tmp sample/fireball.h sample/fireball.so
+	rm -rf sstar bin2c/bin2c build tmp sample/sstar.h sample/sstar.so
 	mkdir build
 	mkdir tmp
-	mkdir tmp/fireball
+	mkdir tmp/sstar
 	mkdir tmp/window
 	mkdir tmp/vulkan
 clean_windows:
-	del /F bin2c\bin2c bin2c\bin2c.pdb sample\fireball.h sample\fireball.dll > nul 2>&1
+	del /F bin2c\bin2c bin2c\bin2c.pdb sample\sstar.h sample\sstar.dll > nul 2>&1
 	if exist build ( rd /s /q build )
 	if exist tmp ( rd /s /q tmp )
 	mkdir build
 	mkdir tmp
-	mkdir tmp\fireball
+	mkdir tmp\sstar
 	mkdir tmp\window
 	mkdir tmp\vulkan

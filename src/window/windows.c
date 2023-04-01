@@ -22,8 +22,8 @@ void create_window_param(SkdWindowParam *out) {
 }
 
 warn_t create_window(const char *title, uint16_t width, uint16_t height) {
-    fb_info("start to initialize win32 window ...");
-    fb_indent_logger();
+    ss_info("initializing win32 window ...");
+    ss_indent_logger();
     // instance handle
     g_hinst = GetModuleHandle(NULL);
     // window class
@@ -42,13 +42,13 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
         L"WIN32APIWINDOW",
         NULL,
     };
-    if (!RegisterClassExW(&wc)) fb_error("failed to register window class.");
+    if (!RegisterClassExW(&wc)) ss_error("failed to register window class.");
     // adjust window size
     RECT rect = { 0, 0, (long)width, (long)height };
     AdjustWindowRectEx(&rect, style, 0, 0);
     // window
     wchar_t wtitle[256] = {};
-    if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) fb_error("failed to convert title multibyte to wide.");
+    if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) ss_error("failed to convert title multibyte to wide.");
     g_hwnd = CreateWindowExW(
         0,
         L"WIN32APIWINDOW",
@@ -63,12 +63,12 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
         g_hinst,
         NULL
     );
-    if (!g_hwnd) fb_error("failed to create window.");
+    if (!g_hwnd) ss_error("failed to create window.");
     // finish
     ShowWindow(g_hwnd, SW_SHOWDEFAULT);
     UpdateWindow(g_hwnd);
-    fb_dedent_logger();
-    fb_info("succeeded to initialize win32 window.");
+    ss_dedent_logger();
+    ss_info("win32 window initialization succeeded.");
     return 0;
 }
 

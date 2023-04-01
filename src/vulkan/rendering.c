@@ -18,9 +18,9 @@ warn_t prepare_rendering(uint32_t *p_id) {
     );
     // wait for a fence
     const VkFence fence = app.framedata.fence;
-    if (vkWaitForFences(app.core.device, 1, &fence, VK_TRUE, UINT64_MAX) != 0) fb_warning("failed to wait for fence.");
+    if (vkWaitForFences(app.core.device, 1, &fence, VK_TRUE, UINT64_MAX) != 0) ss_warning("failed to wait for fence.");
     // reset fences
-    if (vkResetFences(app.core.device, 1, &fence) != 0) fb_warning("failed to reset fence.");
+    if (vkResetFences(app.core.device, 1, &fence) != 0) ss_warning("failed to reset fence.");
     // TODO: reset command buffer?
     // finish
     *p_id = next_image_idx;
