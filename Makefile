@@ -68,14 +68,14 @@ exh2imh/exh2imh:	exh2imh/exh2imh.rs
 	rustc -o exh2imh/exh2imh exh2imh/exh2imh.rs
 
 clean_linux:
-	rm -rf sstar bin2c/bin2c build tmp sample/sstar.h sample/sstar.so
+	rm -rf sstar bin2c/bin2c exh2imh/exh2imh build tmp sample/sstar.h sample/sstar.so
 	mkdir build
 	mkdir tmp
 	mkdir tmp/sstar
 	mkdir tmp/window
 	mkdir tmp/vulkan
 clean_windows:
-	del /F bin2c\bin2c bin2c\bin2c.pdb sample\sstar.h sample\sstar.dll > nul 2>&1
+	del /F bin2c\bin2c bin2c\bin2c.pdb exh2imh\exh2imh exh2imh\exh2imh.pdb sample\sstar.h sample\sstar.dll > nul 2>&1
 	if exist build ( rd /s /q build )
 	if exist tmp ( rd /s /q tmp )
 	mkdir build
