@@ -8,12 +8,12 @@ EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32
     ss_info("initializing Shooting Star ...");
     ss_indent_logger();
 
-    warn_t res = FB_SUCCESS;
+    warn_t res = SS_SUCCESS;
     SkdWindowParam window_param;
 
-    if (create_window(title, width, height) != FB_SUCCESS) res = FB_WARN;
+    if (create_window(title, width, height) != SS_SUCCESS) res = SS_WARN;
     create_window_param(&window_param);
-    if (init_vulkan(&window_param, max_image_num) != FB_SUCCESS) res = FB_WARN;
+    if (init_vulkan(&window_param, max_image_num) != SS_SUCCESS) res = SS_WARN;
 
     ss_dedent_logger();
     ss_info("Shooting Star initialization completed.");
@@ -32,10 +32,10 @@ EXPORT warn_t ss_should_close() {
 }
 
 EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, uint32_t count) {
-    warn_t res = FB_SUCCESS;
+    warn_t res = SS_SUCCESS;
     uint32_t id;
-    if (prepare_rendering(&id) != FB_SUCCESS) res = FB_WARN;
-    if (begin_render(id, r, g, b) != FB_SUCCESS) res = FB_WARN;
+    if (prepare_rendering(&id) != SS_SUCCESS) res = SS_WARN;
+    if (begin_render(id, r, g, b) != SS_SUCCESS) res = SS_WARN;
 
     for (uint32_t i = 0; i < count; ++i) {
         switch (query[i].kind) {
@@ -51,6 +51,6 @@ EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, 
         }
     }
 
-    if (end_render(id) != FB_SUCCESS) res = FB_WARN;
+    if (end_render(id) != SS_SUCCESS) res = SS_WARN;
     return res;
 }

@@ -14,8 +14,8 @@
 // ================================================================================================================= //
 
 typedef int warn_t;
-#define FB_WARN 0
-#define FB_SUCCESS 1
+#define SS_WARN 0
+#define SS_SUCCESS 1
 
 EXPORT warn_t ss_init_logger(void);
 EXPORT void ss_indent_logger(void);

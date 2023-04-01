@@ -24,7 +24,7 @@ warn_t prepare_rendering(uint32_t *p_id) {
     // TODO: reset command buffer?
     // finish
     *p_id = next_image_idx;
-    return FB_SUCCESS;
+    return SS_SUCCESS;
 }
 
 warn_t begin_render(uint32_t id, float r, float g, float b) {
@@ -68,7 +68,7 @@ warn_t begin_render(uint32_t id, float r, float g, float b) {
     vkCmdBindVertexBuffers(command, 0, 1, &app.resource.square.vertex_buffer, &offset);
     vkCmdBindIndexBuffer(command, app.resource.square.index_buffer, offset, VK_INDEX_TYPE_UINT32);
     // finish
-    return FB_SUCCESS;
+    return SS_SUCCESS;
 }
 
 warn_t end_render(uint32_t id) {
@@ -105,7 +105,7 @@ warn_t end_render(uint32_t id) {
     };
     WARN(vkQueuePresentKHR(app.rendering.queue, &present_info), "failed to enqueue present command.");
     // finish
-    return FB_SUCCESS;
+    return SS_SUCCESS;
 }
 
 void draw(const ModelData *data) {

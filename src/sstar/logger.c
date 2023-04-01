@@ -13,7 +13,7 @@ EXPORT warn_t ss_init_logger(void) {
     if (setvbuf(stderr, NULL, _IOFBF, 8388608) != 0)
         return ss_warning("failed to setvbuf() for stderr.\n");
 #endif
-    return FB_SUCCESS;
+    return SS_SUCCESS;
 }
 
 EXPORT void ss_indent_logger(void) {
@@ -45,7 +45,7 @@ EXPORT warn_t ss_warning(const char *msg) {
     fprintf(stderr, "%s\n", msg);
     fflush(stderr);
 #endif
-    return FB_WARN;
+    return SS_WARN;
 }
 
 EXPORT void ss_info(const char *msg) {

@@ -116,7 +116,7 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     xcb_flush(g_connection);
     ss_dedent_logger();
     ss_info("xcb window initialization succeeded.");
-    return FB_SUCCESS;
+    return SS_SUCCESS;
 }
 
 int32_t do_window_events(void) {

@@ -6,7 +6,7 @@ warn_t update_camera(const CameraData *cameradata) {
     if (!map_memory(&app, app.resource.camera.buffer_memory, (void *)cameradata, sizeof(CameraData)))
         return ss_warning("failed to map camera data.");
     else
-        return FB_SUCCESS;
+        return SS_SUCCESS;
 }
 
 warn_t use_image_texture(uint32_t id) {
@@ -24,5 +24,5 @@ warn_t use_image_texture(uint32_t id) {
         0,
         NULL
     );
-    return FB_SUCCESS;
+    return SS_SUCCESS;
 }
