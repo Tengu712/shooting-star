@@ -139,8 +139,8 @@ warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight,
         VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
-        window_param->data.xcb_window.connection,
-        window_param->data.xcb_window.window,
+        window_param->xcb_window.connection,
+        window_param->xcb_window.window,
     };
     CHECK(vkCreateXcbSurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create xcb surface.");
 #elif _WIN32
@@ -148,8 +148,8 @@ warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight,
         VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
-        window_param->data.winapi_window.hinst,
-        window_param->data.winapi_window.hwnd,
+        window_param->winapi_window.hinst,
+        window_param->winapi_window.hwnd,
     };
     CHECK(vkCreateWin32SurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create win32 surface.");
 #endif

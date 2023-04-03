@@ -32,6 +32,14 @@ warn_t end_render(void);
 // A function to draw.
 void draw(const ModelData *data);
 
+// A function to update camera.
+// It overwrites camera uniform buffer data,
+// so you should call it once before rendering.
+warn_t update_camera(const CameraData *cameradata);
+
+// A function to use image texture.
+warn_t use_image_texture(uint32_t id);
+
 // ================================================================================================================= //
 //         Image                                                                                                     //
 // ================================================================================================================= //
@@ -48,15 +56,3 @@ warn_t load_image_from_file(const char *path, uint32_t *out_id);
 
 // A function to unload an image.
 void unload_image(uint32_t id);
-
-// ================================================================================================================= //
-//         Descriptor Sets                                                                                           //
-// ================================================================================================================= //
-
-// A function to update camera.
-// It overwrites camera uniform buffer data,
-// so you should call it once before rendering.
-warn_t update_camera(const CameraData *cameradata);
-
-// A function to use image texture.
-warn_t use_image_texture(uint32_t id);
