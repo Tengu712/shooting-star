@@ -104,5 +104,5 @@ void main() {
         ) * new_pos;
     }
     out_color = vec4(1.0) * constant.col;
-    out_uv = in_uv; // TODO: use constant.uv
+    out_uv = vec2(constant.uv.x + (constant.uv.z - constant.uv.x) * in_uv.x, constant.uv.y + (constant.uv.w - constant.uv.y) * in_uv.y);
 }
