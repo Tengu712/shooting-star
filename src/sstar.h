@@ -53,12 +53,13 @@ typedef struct ModelData_t {
 } ModelData;
 
 typedef struct CameraData_t {
-    Vec3 view_pos;
-    Vec3 view_rot;
+    Vec4 view_pos;
+    Vec4 view_rot;
     struct Ortho {
         float width;
         float height;
         float depth;
+        float _dummy;
     } ortho;
     struct Perse {
         float pov;
@@ -88,10 +89,8 @@ typedef struct RenderingQuery_t {
 //   1. title: window title
 //   2. width: screen width
 //   3. height: screen height
-//   4. vwidth: viewport width
-//   5. vheight: viewport height
 //   4. max_image_num: the max number of image textures
-EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, float vwidth, float vheight, uint32_t max_image_num);
+EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num);
 
 // A function to terminate Shooting Star.
 EXPORT void ss_terminate(void);

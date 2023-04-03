@@ -27,7 +27,7 @@ extern int32_t shader_frag_size;
 
 VulkanApp app;
 
-warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight, uint32_t max_image_texture_cnt) {
+warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_cnt) {
     ss_info("initializing Vulkan ...");
     ss_indent_logger();
 
@@ -168,8 +168,7 @@ warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight,
     const VkSurfaceFormatKHR surface_format = surface_formats[surface_format_index];
     VkSurfaceCapabilitiesKHR surface_capabilities;
     CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.rendering.surface, &surface_capabilities), "failed to get surface capabilities.");
-    app.rendering.width = surface_capabilities.currentExtent.width;
-    app.rendering.height = surface_capabilities.currentExtent.height;
+    app.rendering.surface_size = surface_capabilities.currentExtent;
     free(surface_formats);
 
     // swapchain
@@ -278,8 +277,8 @@ warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight,
         app.pipeline.render_pass,
         1,
         NULL,
-        app.rendering.width,
-        app.rendering.height,
+        app.rendering.surface_size.width,
+        app.rendering.surface_size.height,
         1,
     };
     app.pipeline.framebuffers = (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.rendering.images_cnt);
@@ -446,12 +445,12 @@ warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight,
     VkViewport viewport = {
         0.0f,
         0.0f,
-        vwidth,
-        vheight,
+        app.rendering.surface_size.width,
+        app.rendering.surface_size.height,
         0.0f,
         1.0f,
     };
-    VkRect2D scissor = { {0, 0}, {viewport.width, viewport.height} };
+    VkRect2D scissor = { {0, 0}, app.rendering.surface_size };
     VkPipelineViewportStateCreateInfo viewport_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         NULL,

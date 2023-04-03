@@ -3,7 +3,7 @@
 #include "../window.h"
 #include "../vulkan.h"
 
-EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, float vwidth, float vheight, uint32_t max_image_num) {
+EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num) {
     ss_info("Shooting Star 0.1.0");
     ss_info("initializing Shooting Star ...");
     ss_indent_logger();
@@ -13,7 +13,7 @@ EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, float 
 
     if (create_window(title, width, height) != SS_SUCCESS) res = SS_WARN;
     create_window_param(&window_param);
-    if (init_vulkan(&window_param, vwidth, vheight, max_image_num) != SS_SUCCESS) res = SS_WARN;
+    if (init_vulkan(&window_param, max_image_num) != SS_SUCCESS) res = SS_WARN;
 
     ss_dedent_logger();
     ss_info("Shooting Star initialization completed.");

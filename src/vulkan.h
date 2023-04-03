@@ -10,7 +10,7 @@
 // ================================================================================================================= //
 
 // A function to initialize Vulkan.
-warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight, uint32_t max_image_texture_cnt);
+warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_cnt);
 
 // A terminator function.
 void terminate_vulkan(void);

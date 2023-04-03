@@ -45,13 +45,12 @@ warn_t begin_render(float r, float g, float b) {
     WARN(vkBeginCommandBuffer(command, &command_buffer_begin_info), "failed to begin record commands to render.");
     // begin render pass
     const VkClearValue clear_value = {{{ r, g, b, 0.0f }}};
-    const VkExtent2D extent = { app.rendering.width, app.rendering.height };
     const VkRenderPassBeginInfo render_pass_begin_info = {
         VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         NULL,
         app.pipeline.render_pass,
         app.pipeline.framebuffers[cur_image_idx],
-        { {0, 0}, extent },
+        { {0, 0}, app.rendering.surface_size },
         1,
         &clear_value,
     };

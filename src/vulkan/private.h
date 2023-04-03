@@ -46,8 +46,7 @@ typedef struct VulkanApp_t {
     } core;
     // A struct for objects related to rendering
     struct Renderer_t {
-        uint32_t width;
-        uint32_t height;
+        VkExtent2D surface_size;
         uint32_t images_cnt;
         VkQueue queue;
         VkCommandPool command_pool;
