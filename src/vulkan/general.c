@@ -73,6 +73,9 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     // TODO: select a physical device properly
     const VkPhysicalDevice phys_device = phys_devices[0];
     vkGetPhysicalDeviceMemoryProperties(phys_device, &app.core.phys_device_memory_prop);
+    VkPhysicalDeviceProperties phys_device_prop;
+    vkGetPhysicalDeviceProperties(phys_device, &phys_device_prop);
+    ss_info_fmt("physical device name is '%s'.", phys_device_prop.deviceName);
     free(phys_devices);
 
     // queue family index
@@ -136,8 +139,8 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
-        window_param->data.xcb_window.connection,
-        window_param->data.xcb_window.window,
+        window_param->xcb_window.connection,
+        window_param->xcb_window.window,
     };
     CHECK(vkCreateXcbSurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create xcb surface.");
 #elif _WIN32
@@ -145,8 +148,8 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
-        window_param->data.winapi_window.hinst,
-        window_param->data.winapi_window.hwnd,
+        window_param->winapi_window.hinst,
+        window_param->winapi_window.hwnd,
     };
     CHECK(vkCreateWin32SurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create win32 surface.");
 #endif
@@ -165,8 +168,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     const VkSurfaceFormatKHR surface_format = surface_formats[surface_format_index];
     VkSurfaceCapabilitiesKHR surface_capabilities;
     CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(phys_device, app.rendering.surface, &surface_capabilities), "failed to get surface capabilities.");
-    app.rendering.width = surface_capabilities.currentExtent.width;
-    app.rendering.height = surface_capabilities.currentExtent.height;
+    app.rendering.surface_size = surface_capabilities.currentExtent;
     free(surface_formats);
 
     // swapchain
@@ -275,8 +277,8 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         app.pipeline.render_pass,
         1,
         NULL,
-        app.rendering.width,
-        app.rendering.height,
+        app.rendering.surface_size.width,
+        app.rendering.surface_size.height,
         1,
     };
     app.pipeline.framebuffers = (VkFramebuffer *)malloc(sizeof(VkFramebuffer) * app.rendering.images_cnt);
@@ -443,12 +445,12 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     VkViewport viewport = {
         0.0f,
         0.0f,
-        (float)app.rendering.width,
-        (float)app.rendering.height,
+        app.rendering.surface_size.width,
+        app.rendering.surface_size.height,
         0.0f,
         1.0f,
     };
-    VkRect2D scissor = { {0, 0}, {app.rendering.width, app.rendering.height} };
+    VkRect2D scissor = { {0, 0}, app.rendering.surface_size };
     VkPipelineViewportStateCreateInfo viewport_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         NULL,

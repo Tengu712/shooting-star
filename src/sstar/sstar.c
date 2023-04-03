@@ -39,10 +39,10 @@ EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, 
     for (uint32_t i = 0; i < count; ++i) {
         switch (query[i].kind) {
             case RENDERING_QUERY_TYPE_MODEL:
-                draw(&query[i].data.model_data);
+                draw(query[i].data.model_data);
                 break;
             case RENDERING_QUERY_TYPE_CAMERA:
-                update_camera(&query[i].data.camera_data);
+                update_camera(query[i].data.camera_data);
                 break;
             case RENDERING_QUERY_TYPE_IMAGE_TEXTURE:
                 use_image_texture(query[i].data.image_texture_id);
@@ -52,4 +52,21 @@ EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, 
 
     if (end_render() != SS_SUCCESS) res = SS_WARN;
     return res;
+}
+
+// A function to load image texture from memory.
+// The number of channel of the image must be 4 (RGBA).
+EXPORT warn_t ss_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
+    return load_image_from_memory(pixels, width, height, out_id);
+}
+
+// A function to load an image from file.
+// The number of channel of the image must be 4 (RGBA).
+EXPORT warn_t ss_load_image_from_file(const char *path, uint32_t *out_id) {
+    return load_image_from_file(path, out_id);
+}
+
+// A function to unload an image.
+EXPORT void ss_unload_image(uint32_t id) {
+    unload_image(id);
 }

@@ -24,8 +24,8 @@ static xcb_window_t g_window;
 static xcb_intern_atom_reply_t *g_atom_delete_window;
 
 void create_window_param(WindowParam *out) {
-    out->data.xcb_window.connection = g_connection;
-    out->data.xcb_window.window = g_window;
+    out->xcb_window.connection = g_connection;
+    out->xcb_window.window = g_window;
 }
 
 warn_t create_window(const char *title, uint16_t width, uint16_t height) {

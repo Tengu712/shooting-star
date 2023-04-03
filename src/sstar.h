@@ -23,10 +23,11 @@ EXPORT void ss_dedent_logger(void);
 EXPORT void ss_error(const char *msg);
 EXPORT warn_t ss_warning(const char *msg);
 EXPORT void ss_info(const char *msg);
+EXPORT void ss_info_fmt(const char *format, ...);
 EXPORT void ss_debug(const char *format, ...);
 
 // ================================================================================================================= //
-//     Shooting Star                                                                                                      //
+//     Shooting Star                                                                                                 //
 // ================================================================================================================= //
 
 typedef struct Vec3_t {
@@ -52,12 +53,13 @@ typedef struct ModelData_t {
 } ModelData;
 
 typedef struct CameraData_t {
-    Vec3 view_pos;
-    Vec3 view_rot;
+    Vec4 view_pos;
+    Vec4 view_rot;
     struct Ortho {
         float width;
         float height;
         float depth;
+        float _dummy;
     } ortho;
     struct Perse {
         float pov;
@@ -76,8 +78,8 @@ typedef enum RenderingQueryType_t {
 typedef struct RenderingQuery_t {
     RenderingQueryType kind;
     union {
-        ModelData model_data;
-        CameraData camera_data;
+        ModelData *model_data;
+        CameraData *camera_data;
         uint32_t image_texture_id;
     } data;
 } RenderingQuery;
@@ -85,8 +87,8 @@ typedef struct RenderingQuery_t {
 // A function to initialize Shooting Star.
 // This parameters are:
 //   1. title: window title
-//   2. width: window width
-//   3. height: window height
+//   2. width: screen width
+//   3. height: screen height
 //   4. max_image_num: the max number of image textures
 EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num);
 
@@ -104,3 +106,14 @@ EXPORT warn_t ss_should_close(void);
 //   4. query: query array for rendering operations
 //   5. count: the number of query array
 EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, uint32_t count);
+
+// A function to load image texture from memory.
+// The number of channel of the image must be 4 (RGBA).
+EXPORT warn_t ss_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id);
+
+// A function to load an image texture from file.
+// The number of channel of the image must be 4 (RGBA).
+EXPORT warn_t ss_load_image_from_file(const char *path, uint32_t *out_id);
+
+// A function to unload an image texture.
+EXPORT void ss_unload_image(uint32_t id);

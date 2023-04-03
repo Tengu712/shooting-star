@@ -16,8 +16,8 @@ static LRESULT WINAPI WindowProcedure(HWND hwnd, uint32_t msg, WPARAM wparam, LP
 }
 
 void create_window_param(WindowParam *out) {
-    out->data.winapi_window.hinst = (void *)g_hinst;
-    out->data.winapi_window.hwnd = (void *)g_hwnd;
+    out->winapi_window.hinst = (void *)g_hinst;
+    out->winapi_window.hwnd = (void *)g_hwnd;
 }
 
 warn_t create_window(const char *title, uint16_t width, uint16_t height) {
@@ -26,7 +26,7 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     // instance handle
     g_hinst = GetModuleHandle(NULL);
     // window class
-    const DWORD style = WS_OVERLAPPED | WS_SYSMENU | WS_MINIMIZEBOX;
+    const DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
     const WNDCLASSEXW wc = {
         sizeof(WNDCLASSEXW),
         CS_CLASSDC,
@@ -44,7 +44,7 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     if (!RegisterClassExW(&wc)) ss_error("failed to register window class.");
     // adjust window size
     RECT rect = { 0, 0, (long)width, (long)height };
-    AdjustWindowRectEx(&rect, style, 0, 0);
+    AdjustWindowRect(&rect, style, FALSE);
     // window
     wchar_t wtitle[256] = {};
     if (!MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, title, -1, wtitle, 256)) ss_error("failed to convert title multibyte to wide.");
@@ -55,8 +55,8 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
         style,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        rect.right - rect.left,
-        rect.bottom - rect.top,
+        (int)(rect.right - rect.left),
+        (int)(rect.bottom - rect.top),
         NULL,
         NULL,
         g_hinst,

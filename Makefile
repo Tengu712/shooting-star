@@ -33,7 +33,7 @@ windows:	$(sstar_dependencies) tmp/window/windows.o exh2imh/exh2imh
 	copy build\sstar.h sample\sstar.h > nul
 	copy build\sstar.dll sample\sstar.dll > nul
 
-tmp/sstar/sstar.o:	src/sstar.h src/sstar/sstar.c
+tmp/sstar/sstar.o:	$(window_dependencies) $(vulkan_dependencies) src/sstar.h src/sstar/sstar.c
 	gcc -Wall -c -o tmp/sstar/sstar.o src/sstar/sstar.c
 tmp/sstar/logger.o:		src/sstar.h src/sstar/logger.c
 	gcc -Wall -c -o tmp/sstar/logger.o src/sstar/logger.c
