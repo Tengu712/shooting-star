@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../sstar.h"
 #include "../vulkan.h"
 
 #ifdef __linux__

@@ -27,7 +27,7 @@ extern int32_t shader_frag_size;
 
 VulkanApp app;
 
-warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_cnt) {
+warn_t init_vulkan(const WindowParam *window_param, float vwidth, float vheight, uint32_t max_image_texture_cnt) {
     ss_info("initializing Vulkan ...");
     ss_indent_logger();
 
@@ -73,6 +73,9 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     // TODO: select a physical device properly
     const VkPhysicalDevice phys_device = phys_devices[0];
     vkGetPhysicalDeviceMemoryProperties(phys_device, &app.core.phys_device_memory_prop);
+    VkPhysicalDeviceProperties phys_device_prop;
+    vkGetPhysicalDeviceProperties(phys_device, &phys_device_prop);
+    ss_info_fmt("physical device name is '%s'.", phys_device_prop.deviceName);
     free(phys_devices);
 
     // queue family index
@@ -443,12 +446,12 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     VkViewport viewport = {
         0.0f,
         0.0f,
-        (float)app.rendering.width,
-        (float)app.rendering.height,
+        vwidth,
+        vheight,
         0.0f,
         1.0f,
     };
-    VkRect2D scissor = { {0, 0}, {app.rendering.width, app.rendering.height} };
+    VkRect2D scissor = { {0, 0}, {viewport.width, viewport.height} };
     VkPipelineViewportStateCreateInfo viewport_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         NULL,
