@@ -3,7 +3,11 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::process::{exit, Command, Stdio};
 
-const SUBTOOLS: [&'static str; 2] = ["./subtools/bin2c/bin2c", "./subtools/exh2imh/exh2imh"];
+const SUBTOOLS: [&'static str; 3] = [
+    "./subtools/bin2c/bin2c",
+    "./subtools/exh2imh/exh2imh",
+    "./subtools/cpin/cpin",
+];
 const RULE_OBJ: &'static [u8] = b"\
 rule obj
     depfile = $out.d
@@ -29,24 +33,30 @@ const RULE_E2I: &'static [u8] = b"\
 rule e2i
     command = ./subtools/exh2imh/exh2imh $in $out
 ";
+const RULE_CP: &'static [u8] = b"\
+rule cp
+    command = ./subtools/cpin/cpin $in $out
+";
 #[cfg(target_os = "windows")]
 const BUILD_AFTER: &'static [u8] = b"\
-build .\\build\\sstar.h: e2i .\\src\\sstar.h
+build ./build/sstar.h: e2i ./src/sstar.h
+build ./sample/sstar.h: cp ./build/sstar.h
+build ./sample/sstar.dll: cp ./build/sstar.dll
 ";
 #[cfg(target_os = "linux")]
 const BUILD_AFTER: &'static [u8] = b"\
 build ./build/sstar.h: e2i ./src/sstar.h
+build ./sample/sstar.h: cp ./build/sstar.h
+build ./sample/sstar.so: cp ./build/sstar.so
 ";
 
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() < 2 {
         println!("dev <option>");
-        println!(
-            "    init  : init workspace       (build or rebuild subtools and generate build.ninja)"
-        );
-        println!("    build : build project        (generate build.ninja and run ninja)");
-        println!("    clean : clean workspace      (remove all files that were created by me)");
+        println!("    init  : init workspace  (build subtools and generate build.ninja)");
+        println!("    build : build project   (generate build.ninja and run ninja)");
+        println!("    clean : clean workspace (remove all files that were created by me)");
         return;
     }
     if args[1] == "init" {
@@ -88,11 +98,6 @@ fn run_build() {
         .stderr(Stdio::inherit())
         .output()
         .unwrap();
-    copy_file("./build/sstar.h", "./sample/sstar.h");
-    #[cfg(target_os = "windows")]
-    copy_file("./build/sstar.dll", "./sample/sstar.dll");
-    #[cfg(target_os = "linux")]
-    copy_file("./build/sstar.so", "./sample/sstar.so");
 }
 
 fn run_clean() {
@@ -146,6 +151,7 @@ fn generate_ninja() -> std::io::Result<()> {
     buf_writer.write_all(RULE_GSC)?;
     buf_writer.write_all(RULE_B2C)?;
     buf_writer.write_all(RULE_E2I)?;
+    buf_writer.write_all(RULE_CP)?;
 
     let mut cfiles = Vec::new();
     let mut ofiles = Vec::new();
@@ -233,18 +239,5 @@ fn find_c(cfiles: &mut Vec<String>, shaders: &mut Vec<String>, dir: &str) {
         } else if path_str.ends_with(".vert") || path_str.ends_with(".frag") {
             shaders.push(String::from(path_str).replace('\\', "/"));
         }
-    }
-}
-
-/// A function to copy file.
-fn copy_file(s: &str, d: &str) {
-    match std::fs::copy(s, d) {
-        Ok(_) => println!("dev: copied {} to {}", s, d),
-        Err(e) => eprintln!(
-            "dev warning: failed to copy {} to {} : {}",
-            s,
-            d,
-            e.to_string()
-        ),
     }
 }
