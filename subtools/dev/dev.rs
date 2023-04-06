@@ -3,7 +3,7 @@ use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::process::{exit, Command, Stdio};
 
-const SUBTOOLS: [&'static str; 2] = ["./bin2c/bin2c", "./exh2imh/exh2imh"];
+const SUBTOOLS: [&'static str; 2] = ["./subtools/bin2c/bin2c", "./subtools/exh2imh/exh2imh"];
 const RULE_OBJ: &'static [u8] = b"\
 rule obj
     depfile = $out.d
@@ -23,11 +23,11 @@ rule gsc
 ";
 const RULE_B2C: &'static [u8] = b"\
 rule b2c
-    command = ./bin2c/bin2c $in $out $symbol
+    command = ./subtools/bin2c/bin2c $in $out $symbol
 ";
 const RULE_E2I: &'static [u8] = b"\
 rule e2i
-    command = ./exh2imh/exh2imh $in $out
+    command = ./subtools/exh2imh/exh2imh $in $out
 ";
 #[cfg(target_os = "windows")]
 const BUILD_AFTER: &'static [u8] = b"\
