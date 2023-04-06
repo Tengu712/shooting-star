@@ -1,9 +1,4 @@
-/build/
-/tmp/
-
-/.ninja_log
-/build.ninja
-/dev
+/exh2imh
 
 *.a
 *.lib

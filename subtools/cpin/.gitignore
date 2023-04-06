@@ -1,9 +1,4 @@
-/build/
-/tmp/
-
-/.ninja_log
-/build.ninja
-/dev
+/cpin
 
 *.a
 *.lib
