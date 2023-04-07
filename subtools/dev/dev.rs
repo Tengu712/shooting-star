@@ -11,11 +11,11 @@ const SUBTOOLS: [&'static str; 3] = [
 const RULE_OBJ: &'static [u8] = b"\
 rule obj
     depfile = $out.d
-    command = gcc -MMD -MF $out.d -Wall -c -o $out $in
+    command = gcc -MMD -MF $out.d -Wall -fPIC -c -o $out $in
 ";
 const RULE_DLL: &'static [u8] = b"\
 rule dll
-    command = gcc -Wall -shared -o $out $in $flags
+    command = gcc -Wall -fPIC -shared -o $out $in $flags
 ";
 const RULE_RSC: &'static [u8] = b"\
 rule rsc

@@ -34,7 +34,7 @@ warn_t create_window(const char *title, uint16_t width, uint16_t height) {
     xcb_void_cookie_t res;
     // X
     g_connection = xcb_connect(NULL, NULL);
-    if (xcb_connection_has_ss_error(g_connection)) ss_error("failed to get xcb connection.");
+    if (xcb_connection_has_error(g_connection)) ss_error("failed to get xcb connection.");
     // screen
     const xcb_setup_t *setup = xcb_get_setup(g_connection);
     if (setup == NULL) ss_error("failed to get xcb setup.");
