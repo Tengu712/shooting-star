@@ -3,7 +3,13 @@
 #include "../window.h"
 #include "../vulkan.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num) {
+    if (setvbuf(stdout, NULL, _IOFBF, 8388608) != 0) ss_warning("failed to setvbuf() for stdout.\n");
+    if (setvbuf(stderr, NULL, _IOFBF, 8388608) != 0) ss_warning("failed to setvbuf() for stderr.\n");
+
     ss_info("Shooting Star 0.1.0");
     ss_info("initializing Shooting Star ...");
     ss_indent_logger();
@@ -54,19 +60,22 @@ EXPORT warn_t ss_render(float r, float g, float b, const RenderingQuery *query, 
     return res;
 }
 
-// A function to load image texture from memory.
-// The number of channel of the image must be 4 (RGBA).
 EXPORT warn_t ss_load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id) {
     return load_image_from_memory(pixels, width, height, out_id);
 }
 
-// A function to load an image from file.
-// The number of channel of the image must be 4 (RGBA).
 EXPORT warn_t ss_load_image_from_file(const char *path, uint32_t *out_id) {
-    return load_image_from_file(path, out_id);
+    int32_t width = 0;
+    int32_t height = 0;
+    int32_t channel_cnt = 0;
+    unsigned char *pixels = stbi_load(path, &width, &height, &channel_cnt, 0);
+    if (pixels == NULL) return ss_warning_fmt("failed to load image file '%s'.", path);
+    if (channel_cnt != 4) return ss_warning_fmt("tried to create image texture from invalid color format image file '%s'.", path);
+    const warn_t res = load_image_from_memory(pixels, width, height, out_id);
+    stbi_image_free((void *)pixels);
+    return res;
 }
 
-// A function to unload an image.
 EXPORT void ss_unload_image(uint32_t id) {
     unload_image(id);
 }

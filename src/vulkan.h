@@ -49,10 +49,5 @@ warn_t use_image_texture(uint32_t id);
 // It set texture id to `out` parameter.
 warn_t load_image_from_memory(const unsigned char *pixels, int32_t width, int32_t height, uint32_t *out_id);
 
-// A function to load an image from file.
-// The number of channel of the image must be 4 (RGBA).
-// It set texture id to `out` parameter.
-warn_t load_image_from_file(const char *path, uint32_t *out_id);
-
 // A function to unload an image.
 void unload_image(uint32_t id);

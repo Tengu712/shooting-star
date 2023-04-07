@@ -17,11 +17,11 @@ typedef int warn_t;
 #define SS_WARN 0
 #define SS_SUCCESS 1
 
-EXPORT warn_t ss_init_logger(void);
 EXPORT void ss_indent_logger(void);
 EXPORT void ss_dedent_logger(void);
 EXPORT void ss_error(const char *msg);
 EXPORT warn_t ss_warning(const char *msg);
+EXPORT warn_t ss_warning_fmt(const char *format, ...);
 EXPORT void ss_info(const char *msg);
 EXPORT void ss_info_fmt(const char *format, ...);
 EXPORT void ss_debug(const char *format, ...);
