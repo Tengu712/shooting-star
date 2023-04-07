@@ -64,13 +64,13 @@ warn_t load_image_texture(const unsigned char *pixels, int32_t width, int32_t he
     WARN(vkCreateImage(app.core.device, &image_create_info, NULL, &out->image), "failed to create image for image texture.");
     VkMemoryRequirements reqs;
     vkGetImageMemoryRequirements(app.core.device, out->image, &reqs);
-    VkMemoryAllocateInfo allocate_info = {
+    uint32_t memory_type_index = get_memory_type_index(&app, reqs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    const VkMemoryAllocateInfo allocate_info = {
         VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         NULL,
         reqs.size,
-        0,
+        memory_type_index,
     };
-    allocate_info.memoryTypeIndex = get_memory_type_index(&app, reqs, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     WARN(vkAllocateMemory(app.core.device, &allocate_info, NULL, &out->memory), "failed to allocate memory for image texture.");
     WARN(vkBindImageMemory(app.core.device, out->image, out->memory, 0), "failed to bind image memory for image texture.");
     // begin copy command
