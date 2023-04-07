@@ -5,7 +5,7 @@ fn main() {
         return;
     }
     match std::fs::copy(&args[1], &args[2]) {
-        Ok(_) => println!("cpin: copied {} to {}", args[1], args[2]),
+        Ok(_) => (),
         Err(e) => eprintln!("cpin error: failed to copied {} to {} : {}", args[1], args[2], e.to_string()),
     }
 }

@@ -8,9 +8,6 @@ fn main() {
         println!("bin2c <in-filename> <out-filename> <symbol>");
         return;
     }
-    println!("compile '{}' to '{}'", args[1].clone(), args[2].clone());
-    println!("  data array name: {}_data", args[3].clone());
-    println!("  data array size: {}_size", args[3].clone());
     let f_in = match File::open(args[1].clone()) {
         Ok(n) => n,
         Err(_) => {
@@ -52,5 +49,4 @@ fn main() {
     buf_writer.write_all(b"_size = ").unwrap();
     buf_writer.write_all(cnt.to_string().as_bytes()).unwrap();
     buf_writer.write_all(b";\n").unwrap();
-    println!("succeeded");
 }
