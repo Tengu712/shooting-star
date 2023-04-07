@@ -70,12 +70,13 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     CHECK(vkEnumeratePhysicalDevices(app.core.instance, &phys_devices_cnt, NULL), "failed to get the number of physical devices.");
     VkPhysicalDevice *phys_devices = (VkPhysicalDevice *)malloc(sizeof(VkPhysicalDevice) * phys_devices_cnt);
     CHECK(vkEnumeratePhysicalDevices(app.core.instance, &phys_devices_cnt, phys_devices), "failed to enumerate physical devices.");
+    ss_info_fmt("%d physical devices found.", phys_devices_cnt);
     // TODO: select a physical device properly
     const VkPhysicalDevice phys_device = phys_devices[0];
     vkGetPhysicalDeviceMemoryProperties(phys_device, &app.core.phys_device_memory_prop);
     VkPhysicalDeviceProperties phys_device_prop;
     vkGetPhysicalDeviceProperties(phys_device, &phys_device_prop);
-    ss_info_fmt("physical device name is '%s'.", phys_device_prop.deviceName);
+    ss_info_fmt("'%s' selected.", phys_device_prop.deviceName);
     free(phys_devices);
 
     // queue family index
