@@ -145,7 +145,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     };
     CHECK(vkCreateXcbSurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create xcb surface.");
 #elif _WIN32
-    VkWin32SurfaceCreateInfoKHR ci = {
+    const VkWin32SurfaceCreateInfoKHR ci = {
         VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
@@ -302,7 +302,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     CHECK(vkCreateShaderModule(app.core.device, &shader_module_create_info, NULL, &app.pipeline.frag_shader), "failed to create fragment shader module.");
 
     // sampler
-    VkSamplerCreateInfo sampler_create_info = {
+    const VkSamplerCreateInfo sampler_create_info = {
         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         NULL,
         0,
@@ -381,12 +381,12 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     }
 
     // pipeline layout
-    VkPushConstantRange push_constant_range = {
+    const VkPushConstantRange push_constant_range = {
         VK_SHADER_STAGE_VERTEX_BIT,
         0,
         sizeof(ModelData),
     };
-    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
+    const VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         NULL,
         0,
@@ -398,7 +398,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     CHECK(vkCreatePipelineLayout(app.core.device, &pipeline_layout_create_info, NULL, &app.pipeline.pipeline_layout), "failed to create pipeline layout.");
 
     // pipeline
-    VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
+    const VkPipelineShaderStageCreateInfo shader_stage_create_info[2] = {
         {
             VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             NULL,
@@ -418,16 +418,16 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
             NULL,
         },
     };
-    VkVertexInputBindingDescription vertex_input_binding_desc = {
+    const VkVertexInputBindingDescription vertex_input_binding_desc = {
         0,
         sizeof(float) * 5,
         VK_VERTEX_INPUT_RATE_VERTEX,
     };
-    VkVertexInputAttributeDescription vertex_input_attribute_desc[] = {
+    const VkVertexInputAttributeDescription vertex_input_attribute_desc[] = {
         { 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
         { 1, 0, VK_FORMAT_R32G32_SFLOAT, sizeof(float) * 3 },
     };
-    VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {
+    const VkPipelineVertexInputStateCreateInfo vertex_input_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         NULL,
         0,
@@ -436,14 +436,14 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         2,
         vertex_input_attribute_desc,
     };
-    VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {
+    const VkPipelineInputAssemblyStateCreateInfo input_assembly_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
         NULL,
         0,
         VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         VK_FALSE,
     };
-    VkViewport viewport = {
+    const VkViewport viewport = {
         0.0f,
         0.0f,
         app.rendering.surface_size.width,
@@ -451,8 +451,8 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         0.0f,
         1.0f,
     };
-    VkRect2D scissor = { {0, 0}, app.rendering.surface_size };
-    VkPipelineViewportStateCreateInfo viewport_state_create_info = {
+    const VkRect2D scissor = { {0, 0}, app.rendering.surface_size };
+    const VkPipelineViewportStateCreateInfo viewport_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
         NULL,
         0,
@@ -461,7 +461,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         1,
         &scissor,
     };
-    VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {
+    const VkPipelineRasterizationStateCreateInfo rasterization_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         NULL,
         0,
@@ -476,7 +476,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         0.0f,
         1.0f,
     };
-    VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {
+    const VkPipelineMultisampleStateCreateInfo multisample_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         NULL,
         0,
@@ -492,7 +492,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         | VK_COLOR_COMPONENT_G_BIT
         | VK_COLOR_COMPONENT_B_BIT
         | VK_COLOR_COMPONENT_A_BIT;
-    VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
+    const VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
         VK_TRUE,
         VK_BLEND_FACTOR_SRC_ALPHA,
         VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -502,7 +502,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         VK_BLEND_OP_ADD,
         color_component_flag,
     };
-    VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {
+    const VkPipelineColorBlendStateCreateInfo color_blend_state_create_info = {
         VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
         NULL,
         0,
@@ -512,7 +512,7 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
         &color_blend_attachment_state,
         {0.0f, 0.0f, 0.0f, 0.0f},
     };
-    VkGraphicsPipelineCreateInfo pipeline_create_info = {
+    const VkGraphicsPipelineCreateInfo pipeline_create_info = {
         VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         NULL,
         0,
@@ -599,17 +599,17 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
 
     // update all descriptor sets
     for (int32_t i = 0; i < app.pipeline.descriptor_sets_cnt; ++i) {
-        VkDescriptorBufferInfo camera_descriptor_buffer_info = {
+        const VkDescriptorBufferInfo camera_descriptor_buffer_info = {
             app.resource.camera.buffer,
             0,
             VK_WHOLE_SIZE,
         };
-        VkDescriptorImageInfo sampler_descriptor_image_info = {
+        const VkDescriptorImageInfo sampler_descriptor_image_info = {
             app.pipeline.sampler,
             app.resource.image_textures[0].view,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         };
-        VkWriteDescriptorSet write_descriptor_sets[] = {
+        const VkWriteDescriptorSet write_descriptor_sets[] = {
             {
                 VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 NULL,
@@ -639,13 +639,13 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     }
 
     // square
-    float vtxs[4][5] = {
+    const float vtxs[4][5] = {
         { -0.5f, -0.5f, 0.0f, 0.0f, 0.0f },
         { -0.5f,  0.5f, 0.0f, 0.0f, 1.0f },
         {  0.5f,  0.5f, 0.0f, 1.0f, 1.0f },
         {  0.5f, -0.5f, 0.0f, 1.0f, 0.0f },
     };
-    uint32_t idxs[6] = { 0, 1, 2, 0, 2, 3 };
+    const uint32_t idxs[6] = { 0, 1, 2, 0, 2, 3 };
     app.resource.square.index_cnt = 6;
     if (create_buffer(
             &app,
