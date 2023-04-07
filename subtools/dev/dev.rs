@@ -42,36 +42,43 @@ const BUILD_AFTER: &'static [u8] = b"\
 build ./build/sstar.h: e2i ./src/sstar.h
 build ./sample/sstar.h: cp ./build/sstar.h
 build ./sample/sstar.dll: cp ./build/sstar.dll
+build all: phony ./sample/sstar.h ./sample/sstar.dll
+default all
 ";
 #[cfg(target_os = "linux")]
 const BUILD_AFTER: &'static [u8] = b"\
 build ./build/sstar.h: e2i ./src/sstar.h
 build ./sample/sstar.h: cp ./build/sstar.h
 build ./sample/libsstar.so: cp ./build/libsstar.so
+build all: phony ./sample/sstar.h ./sample/libsstar.so
+default all
+";
+#[cfg(target_os = "windows")]
+const RULE_SAMPLE: &'static [u8] = b"\
+rule sample
+    command = gcc -Wall -o $out $in ./sample/sstar.dll
+";
+#[cfg(target_os = "linux")]
+const RULE_SAMPLE: &'static [u8] = b"\
+rule sample
+    command = gcc -Wall -o $out $in -L./sample/ -lsstar -Wl,-rpath='$$ORIGIN'
 ";
 
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
     if args.len() < 2 {
         println!("dev <option>");
-        println!("    init  : init workspace  (build subtools and generate build.ninja)");
-        println!("    build : build project   (generate build.ninja and run ninja)");
-        println!("    clean : clean workspace (remove all files that were created by me)");
-        println!("    sample <name> : build sample");
+        println!("    init  : init workspace");
+        println!("    gn    : generate ninja");
+        println!("    clean : clean workspace");
         return;
     }
     if args[1] == "init" {
         run_init();
-    } else if args[1] == "build" {
-        run_build();
+    } else if args[1] == "gn" {
+        run_gn();
     } else if args[1] == "clean" {
         run_clean();
-    } else if args[1] == "sample" {
-        if args.len() < 3 {
-            eprintln!("dev error: no sample name input");
-            exit(1);
-        }
-        run_sample(&args[2]);
     } else {
         eprintln!("dev error: invalid option '{}'", args[1]);
         exit(1);
@@ -92,7 +99,7 @@ fn run_init() {
     generate_ninja().unwrap();
 }
 
-fn run_build() {
+fn run_gn() {
     for subtool in SUBTOOLS {
         if !Path::new(subtool).is_file() {
             eprintln!("dev error: call `dev init` first.");
@@ -100,11 +107,6 @@ fn run_build() {
         }
     }
     generate_ninja().unwrap();
-    Command::new("ninja")
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .unwrap();
 }
 
 fn run_clean() {
@@ -150,57 +152,6 @@ fn run_clean() {
     }
 }
 
-#[cfg(target_os = "windows")]
-fn run_sample(name: &str) {
-    let _in = String::from("./sample/") + name + ".c";
-    let out = String::from("./sample/") + name + ".exe";
-    let dll = "./sample/sstar.dll";
-    if !Path::new(dll).is_file() || !Path::new("./sample/sstar.h").is_file() {
-        eprintln!("dev error: call `dev build` in advance");
-        exit(1);
-    }
-    if !Path::new(&_in).is_file() {
-        eprintln!("dev error: sample '{}' not found", _in);
-        exit(1);
-    }
-    println!("dev: building {}", out);
-    Command::new("gcc")
-        .arg("-o")
-        .arg(out)
-        .arg(_in)
-        .arg(dll)
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .unwrap();
-}
-
-#[cfg(target_os = "linux")]
-fn run_sample(name: &str) {
-    let _in = String::from("./sample/") + name + ".c";
-    let out = String::from("./sample/") + name + ".out";
-    if !Path::new("./sample/libsstar.so").is_file() || !Path::new("./sample/sstar.h").is_file() {
-        eprintln!("dev error: call `dev build` in advance");
-        exit(1);
-    }
-    if !Path::new(&_in).is_file() {
-        eprintln!("dev error: sample '{}' not found", _in);
-        exit(1);
-    }
-    println!("dev: building {}", out);
-    Command::new("gcc")
-        .arg("-o")
-        .arg(out)
-        .arg(String::from("./sample/") + name + ".c")
-        .arg("-L./sample")
-        .arg("-lsstar")
-        .arg("-Wl,-rpath=$ORIGIN")
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .output()
-        .unwrap();
-}
-
 /// A function to generate ./build.ninja based on files in ./src .
 fn generate_ninja() -> std::io::Result<()> {
     let file_out = match File::create("./build.ninja") {
@@ -219,6 +170,7 @@ fn generate_ninja() -> std::io::Result<()> {
     buf_writer.write_all(RULE_B2C)?;
     buf_writer.write_all(RULE_E2I)?;
     buf_writer.write_all(RULE_CP)?;
+    buf_writer.write_all(RULE_SAMPLE)?;
 
     let mut cfiles = Vec::new();
     let mut ofiles = Vec::new();
@@ -277,6 +229,28 @@ fn generate_ninja() -> std::io::Result<()> {
     buf_writer.write_all(b"    flags = -fvisibility=hidden -lm -lxcb -lvulkan")?;
     buf_writer.write_all(b"\n")?;
     buf_writer.write_all(BUILD_AFTER)?;
+
+    let mut samples = Vec::new();
+    find_c(&mut samples, &mut Vec::new(), "./sample/");
+    #[cfg(target_os = "windows")]
+    let ex = ".exe";
+    #[cfg(target_os = "linux")]
+    let ex = ".out";
+    for sample in samples {
+        let (_, name) = sample.rsplit_once('/').unwrap();
+        let name = &name[0..(name.len() - 2)];
+        let out = String::from("./sample/") + name + ex;
+        buf_writer.write_all(b"build ")?;
+        buf_writer.write_all(out.as_bytes())?;
+        buf_writer.write_all(b": sample ")?;
+        buf_writer.write_all(sample.as_bytes())?;
+        buf_writer.write_all(b"\n")?;
+        buf_writer.write_all(b"build ")?;
+        buf_writer.write_all(name.as_bytes())?;
+        buf_writer.write_all(b": phony ")?;
+        buf_writer.write_all(out.as_bytes())?;
+        buf_writer.write_all(b"\n")?;
+    }
 
     println!("dev: created ./build.ninja");
     Ok(())

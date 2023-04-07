@@ -32,5 +32,5 @@ $ git clone <this-repository>
 $ cd Shooting-Star
 $ rustc -o ./dev ./subtools/dev/dev.rs
 $ ./dev init
-$ ./dev build
+$ ninja
 ```

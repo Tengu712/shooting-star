@@ -23,9 +23,7 @@ dev <option>
 * `init` : init workspace
   * build or rebuild subtools
   * generate build.ninja
-* `build` : build project
-  * generate build.ninja
-  * run ninja
+* `gn` : generate build.ninja
+  * based on ./src and ./sample
 * `clean` : clean workspace
-  * remove all files that were created by this app
-* `sample <name>` : build sample whose name is `<name>`
+  * remove all files that were created by this app or ninja
