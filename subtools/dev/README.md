@@ -28,3 +28,4 @@ dev <option>
   * run ninja
 * `clean` : clean workspace
   * remove all files that were created by this app
+* `sample <name>` : build sample whose name is `<name>`

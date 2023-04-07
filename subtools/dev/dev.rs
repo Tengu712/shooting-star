@@ -47,7 +47,7 @@ build ./sample/sstar.dll: cp ./build/sstar.dll
 const BUILD_AFTER: &'static [u8] = b"\
 build ./build/sstar.h: e2i ./src/sstar.h
 build ./sample/sstar.h: cp ./build/sstar.h
-build ./sample/sstar.so: cp ./build/sstar.so
+build ./sample/libsstar.so: cp ./build/libsstar.so
 ";
 
 fn main() {
@@ -57,6 +57,7 @@ fn main() {
         println!("    init  : init workspace  (build subtools and generate build.ninja)");
         println!("    build : build project   (generate build.ninja and run ninja)");
         println!("    clean : clean workspace (remove all files that were created by me)");
+        println!("    sample <name> : build sample");
         return;
     }
     if args[1] == "init" {
@@ -65,6 +66,12 @@ fn main() {
         run_build();
     } else if args[1] == "clean" {
         run_clean();
+    } else if args[1] == "sample" {
+        if args.len() < 3 {
+            eprintln!("dev error: no sample name input");
+            exit(1);
+        }
+        run_sample(&args[2]);
     } else {
         eprintln!("dev error: invalid option '{}'", args[1]);
         exit(1);
@@ -102,20 +109,12 @@ fn run_build() {
 
 fn run_clean() {
     for subtool in SUBTOOLS {
-        let path = Path::new(subtool);
-        if path.is_file() {
-            match std::fs::remove_file(path) {
-                Ok(()) => println!("dev: removed {}", subtool),
-                Err(e) => eprintln!(
-                    "dev warning: failed to remove {} : {}",
-                    subtool,
-                    e.to_string(),
-                ),
-            }
+        if Path::new(subtool).is_file() {
+            remove_file(subtool);
         }
     }
-    let path_ninja = Path::new("./build.ninja");
-    if path_ninja.is_file() {
+    let path_ninja_str = "./build.ninja";
+    if Path::new(path_ninja_str).is_file() {
         println!("dev: ninja -t clean : ");
         Command::new("ninja")
             .arg("-t")
@@ -124,14 +123,82 @@ fn run_clean() {
             .stderr(Stdio::inherit())
             .output()
             .unwrap();
-        match std::fs::remove_file(path_ninja) {
-            Ok(()) => println!("dev: removed build.ninja"),
-            Err(e) => eprintln!(
-                "dev warning: failed to remove ./build.ninja : {}",
-                e.to_string()
-            ),
-        }
+        remove_file(path_ninja_str);
     }
+    let files_sample = match std::fs::read_dir("./sample") {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!(
+                "dev error: failed to get files in sample : {}",
+                e.to_string()
+            );
+            exit(1);
+        }
+    };
+    for file in files_sample {
+        let path = file.unwrap().path();
+        let path_str = path.to_str().unwrap();
+        #[cfg(target_os = "windows")]
+        if !path_str.ends_with(".exe") {
+            continue;
+        }
+        #[cfg(target_os = "linux")]
+        if !path_str.ends_with(".out") {
+            continue;
+        }
+        remove_file(path_str);
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn run_sample(name: &str) {
+    let _in = String::from("./sample/") + name + ".c";
+    let out = String::from("./sample/") + name + ".exe";
+    let dll = "./sample/sstar.dll";
+    if !Path::new(dll).is_file() || !Path::new("./sample/sstar.h").is_file() {
+        eprintln!("dev error: call `dev build` in advance");
+        exit(1);
+    }
+    if !Path::new(&_in).is_file() {
+        eprintln!("dev error: sample '{}' not found", _in);
+        exit(1);
+    }
+    println!("dev: building {}", out);
+    Command::new("gcc")
+        .arg("-o")
+        .arg(out)
+        .arg(_in)
+        .arg(dll)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .unwrap();
+}
+
+#[cfg(target_os = "linux")]
+fn run_sample(name: &str) {
+    let _in = String::from("./sample/") + name + ".c";
+    let out = String::from("./sample/") + name + ".out";
+    if !Path::new("./sample/libsstar.so").is_file() || !Path::new("./sample/sstar.h").is_file() {
+        eprintln!("dev error: call `dev build` in advance");
+        exit(1);
+    }
+    if !Path::new(&_in).is_file() {
+        eprintln!("dev error: sample '{}' not found", _in);
+        exit(1);
+    }
+    println!("dev: building {}", out);
+    Command::new("gcc")
+        .arg("-o")
+        .arg(out)
+        .arg(String::from("./sample/") + name + ".c")
+        .arg("-L./sample")
+        .arg("-lsstar")
+        .arg("-Wl,-rpath=$ORIGIN")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()
+        .unwrap();
 }
 
 /// A function to generate ./build.ninja based on files in ./src .
@@ -201,7 +268,7 @@ fn generate_ninja() -> std::io::Result<()> {
     #[cfg(target_os = "windows")]
     buf_writer.write_all(b"build ./build/sstar.dll: dll ")?;
     #[cfg(target_os = "linux")]
-    buf_writer.write_all(b"build ./build/sstar.so: dll ")?;
+    buf_writer.write_all(b"build ./build/libsstar.so: dll ")?;
     buf_writer.write_all(ofiles.join(" $\n    ").as_bytes())?;
     buf_writer.write_all(b"\n")?;
     #[cfg(target_os = "windows")]
@@ -219,7 +286,14 @@ fn generate_ninja() -> std::io::Result<()> {
 fn find_c(cfiles: &mut Vec<String>, shaders: &mut Vec<String>, dir: &str) {
     let entries = match std::fs::read_dir(dir) {
         Ok(n) => n,
-        Err(_) => return,
+        Err(e) => {
+            eprintln!(
+                "dev error: failed to get files in {} : {}",
+                dir,
+                e.to_string()
+            );
+            exit(1);
+        }
     };
     for entry in entries {
         let path = entry.unwrap().path();
@@ -239,5 +313,13 @@ fn find_c(cfiles: &mut Vec<String>, shaders: &mut Vec<String>, dir: &str) {
         } else if path_str.ends_with(".vert") || path_str.ends_with(".frag") {
             shaders.push(String::from(path_str).replace('\\', "/"));
         }
+    }
+}
+
+/// A function to remove a file
+fn remove_file(path: &str) {
+    match std::fs::remove_file(path) {
+        Ok(()) => println!("dev: removed {}", path),
+        Err(e) => eprintln!("dev warning: failed to remove {} : {}", path, e.to_string(),),
     }
 }
