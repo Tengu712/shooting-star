@@ -6,14 +6,6 @@
 
 static int indent = 0;
 
-EXPORT warn_t ss_init_logger(void) {
-    if (setvbuf(stdout, NULL, _IOFBF, 8388608) != 0)
-        return ss_warning("failed to setvbuf() for stdout.\n");
-    if (setvbuf(stderr, NULL, _IOFBF, 8388608) != 0)
-        return ss_warning("failed to setvbuf() for stderr.\n");
-    return SS_SUCCESS;
-}
-
 EXPORT void ss_indent_logger(void) {
     indent += 1;
 }
@@ -40,6 +32,18 @@ EXPORT warn_t ss_warning(const char *msg) {
     fprintf(stderr, "[ WARN  ] ");
     print_indent(stderr);
     fprintf(stderr, "%s\n", msg);
+    fflush(stderr);
+    return SS_WARN;
+}
+
+EXPORT warn_t ss_warning_fmt(const char *format, ...) {
+    fprintf(stderr, "[ WARN  ] ");
+    print_indent(stderr);
+    va_list va;
+    va_start(va, format);
+    vprintf(format, va);
+    va_end(va);
+    fprintf(stderr, "\n");
     fflush(stderr);
     return SS_WARN;
 }

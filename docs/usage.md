@@ -26,7 +26,6 @@ sequenceDiagram
 
     Note over Game: start program
 
-    Game->>SStar: ss_init_logger
     Game->>+SStar: ss_init
     Note right of SStar: create window and vulkan instance
 

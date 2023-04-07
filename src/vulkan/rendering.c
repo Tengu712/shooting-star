@@ -69,7 +69,7 @@ warn_t begin_render(float r, float g, float b) {
         NULL
     );
     // bind square
-    VkDeviceSize offset = 0;
+    const VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(command, 0, 1, &app.resource.square.vertex_buffer, &offset);
     vkCmdBindIndexBuffer(command, app.resource.square.index_buffer, offset, VK_INDEX_TYPE_UINT32);
     // finish
@@ -97,7 +97,7 @@ warn_t end_render(void) {
     WARN(vkQueueSubmit(app.rendering.queue, 1, &submit_info, app.frame_datas[cur_image_idx].fence), "failed to submit queue to render.");
     // present
     VkResult res;
-    VkPresentInfoKHR present_info = {
+    const VkPresentInfoKHR present_info = {
         VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         NULL,
         1,
@@ -108,6 +108,7 @@ warn_t end_render(void) {
         &res,
     };
     WARN(vkQueuePresentKHR(app.rendering.queue, &present_info), "failed to enqueue present command.");
+    if (res != VK_SUCCESS) ss_warning("failed to present.");
     // finish
     pre_image_idx = cur_image_idx;
     return SS_SUCCESS;

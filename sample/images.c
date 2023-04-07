@@ -10,7 +10,6 @@
     } \
 
 int main() {
-    ss_init_logger();
     ss_init("images", 640, 480, 2);
     uint32_t img_tokyo_station, img_shapes;
     ss_load_image_from_file("tokyo-station.png", &img_tokyo_station);

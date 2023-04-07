@@ -10,7 +10,6 @@
     } \
 
 int main() {
-    ss_init_logger();
     ss_init("rectangles", 640, 480, 0);
     CameraData camera_data = {
         { 0.0f, 0.0f, -500.0f },
