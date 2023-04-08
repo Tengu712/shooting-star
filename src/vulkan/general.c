@@ -352,11 +352,11 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
     const VkDescriptorPoolSize descriptor_pool_sizes[] = {
         {
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            1,
+            app.pipeline.descriptor_sets_cnt * 2, // XXX: some machine fail to vkAllocateDescriptorSets() if this value less than this
         },
         {
             VK_DESCRIPTOR_TYPE_SAMPLER,
-            1,
+            app.pipeline.descriptor_sets_cnt * 2, // XXX: some machine fail to vkAllocateDescriptorSets() if this value less than this
         },
     };
     const VkDescriptorPoolCreateInfo descriptor_pool_create_info = {
