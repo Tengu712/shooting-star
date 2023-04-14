@@ -2,12 +2,14 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/XInput.h>
 #include <string.h>
 
 static Display *g_display;
 static Window g_window;
-Atom g_atom_protocols;
-Atom g_atom_delete_window;
+static Atom g_atom_protocols;
+static Atom g_atom_delete_window;
+static XDevice *g_device;
 static int32_t g_key_states[NUM_OF_KEY_CODES];
 
 // TODO:
@@ -28,7 +30,8 @@ warn_t create_window(const char *title, uint32_t width, uint32_t height) {
     ss_indent_logger();
 
     g_display = XOpenDisplay(NULL);
-    if (g_display == NULL) ss_error("failed to open g_display.");
+    if (g_display == NULL)
+        ss_error("failed to open g_display.");
     // TODO: error handling
     g_window = XCreateSimpleWindow(g_display, RootWindow(g_display, 0), 0, 0, width, height, 0, 0, WhitePixel(g_display, 0));
 
@@ -46,6 +49,24 @@ warn_t create_window(const char *title, uint32_t width, uint32_t height) {
     g_atom_protocols = XInternAtom(g_display, "WM_PROTOCOLS", False);
     g_atom_delete_window = XInternAtom(g_display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(g_display, g_window, &g_atom_delete_window, 1);
+
+    ss_debug("aaa");
+    int opcode, event, error;
+    if (!XQueryExtension(g_display, "XInputExtension", &opcode, &event, &error))
+        ss_error("failed to enable XInput extension.");
+    ss_debug("bbb");
+    int info_cnt;
+    const XDeviceInfoPtr info = XListInputDevices(g_display, &info_cnt);
+    if (info == NULL)
+        ss_error("failed to enumerate input devices.");
+    for (int i = 0; i < info_cnt; ++i) {
+        if (info[i].use == IsXKeyboard) {
+            ss_debug("%s", info[i].name);
+            g_device = XOpenDevice(g_display, info[i].id);
+            break;
+        }
+    }
+    XFreeDeviceList(info);
 
     XMapWindow(g_display, g_window);
     XFlush(g_display);
