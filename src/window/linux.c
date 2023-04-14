@@ -24,7 +24,7 @@ void create_window_param(WindowParam *out) {
 }
 
 warn_t create_window(const char *title, uint32_t width, uint32_t height) {
-    ss_info("start initialize xcb g_window ...");
+    ss_info("initializing xlib g_window ...");
     ss_indent_logger();
 
     g_display = XOpenDisplay(NULL);
@@ -51,7 +51,7 @@ warn_t create_window(const char *title, uint32_t width, uint32_t height) {
     XFlush(g_display);
 
     ss_dedent_logger();
-    ss_info("xcb g_window initialization succeeded.");
+    ss_info("xlib window initialization succeeded.");
     return SS_SUCCESS;
 }
 
