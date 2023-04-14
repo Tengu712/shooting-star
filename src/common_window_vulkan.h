@@ -5,11 +5,11 @@
 // A union as an interface for init_vulkan().
 typedef union {
     struct {
-        void *connection;
+        void *display;
         uint32_t window;
-    } xcb_window;
+    } xlib;
     struct {
         void *hinst;
         void *hwnd;
-    } winapi_window;
+    } win32;
 } WindowParam;

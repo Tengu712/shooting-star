@@ -6,7 +6,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num) {
+EXPORT warn_t ss_init(const char *title, uint32_t width, uint32_t height, uint32_t max_image_num) {
     if (setvbuf(stdout, NULL, _IOFBF, 8388608) != 0) ss_warning("failed to setvbuf() for stdout.\n");
     if (setvbuf(stderr, NULL, _IOFBF, 8388608) != 0) ss_warning("failed to setvbuf() for stderr.\n");
 
@@ -78,4 +78,8 @@ EXPORT warn_t ss_load_image_from_file(const char *path, uint32_t *out_id) {
 
 EXPORT void ss_unload_image(uint32_t id) {
     unload_image(id);
+}
+
+EXPORT int32_t ss_get_input_state(SsKeyCode key_code) {
+    return get_input_state(key_code);
 }

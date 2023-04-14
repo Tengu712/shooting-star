@@ -16,11 +16,11 @@ static LRESULT WINAPI WindowProcedure(HWND hwnd, uint32_t msg, WPARAM wparam, LP
 }
 
 void create_window_param(WindowParam *out) {
-    out->winapi_window.hinst = (void *)g_hinst;
-    out->winapi_window.hwnd = (void *)g_hwnd;
+    out->win32.hinst = (void *)g_hinst;
+    out->win32.hwnd = (void *)g_hwnd;
 }
 
-warn_t create_window(const char *title, uint16_t width, uint16_t height) {
+warn_t create_window(const char *title, uint32_t width, uint32_t height) {
     ss_info("initializing win32 window ...");
     ss_indent_logger();
     // instance handle

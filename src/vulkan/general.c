@@ -3,7 +3,7 @@
 #ifdef _WIN32
 #    define INST_EXT_NAME_SURFACE "VK_KHR_win32_surface"
 #elif __linux__
-#    define INST_EXT_NAME_SURFACE "VK_KHR_xcb_surface"
+#    define INST_EXT_NAME_SURFACE "VK_KHR_xlib_surface"
 #endif
 
 #ifdef RELEASE_BUILD
@@ -136,23 +136,23 @@ warn_t init_vulkan(const WindowParam *window_param, uint32_t max_image_texture_c
 
     // surface
 #ifdef __linux__
-    const VkXcbSurfaceCreateInfoKHR ci = {
-        VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR,
+    const VkXlibSurfaceCreateInfoKHR surface_create_info = {
+        VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
-        window_param->xcb_window.connection,
-        window_param->xcb_window.window,
+        window_param->xlib.display,
+        window_param->xlib.window,
     };
-    CHECK(vkCreateXcbSurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create xcb surface.");
+    CHECK(vkCreateXlibSurfaceKHR(app.core.instance, &surface_create_info, NULL, &app.rendering.surface), "failed to create xlib surface.");
 #elif _WIN32
-    const VkWin32SurfaceCreateInfoKHR ci = {
+    const VkWin32SurfaceCreateInfoKHR surface_create_info = {
         VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
         NULL,
         0,
-        window_param->winapi_window.hinst,
-        window_param->winapi_window.hwnd,
+        window_param->win32.hinst,
+        window_param->win32.hwnd,
     };
-    CHECK(vkCreateWin32SurfaceKHR(app.core.instance, &ci, NULL, &app.rendering.surface), "failed to create win32 surface.");
+    CHECK(vkCreateWin32SurfaceKHR(app.core.instance, &surface_create_info, NULL, &app.rendering.surface), "failed to create win32 surface.");
 #endif
     uint32_t surface_formats_cnt = 0;
     CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, app.rendering.surface, &surface_formats_cnt, NULL), "failed to get the number of surface formats.");

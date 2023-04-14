@@ -21,30 +21,30 @@ static void print_indent(FILE *out) {
 }
 
 EXPORT void ss_error(const char *msg) {
-    fprintf(stderr, "[ ERROR ] ");
-    print_indent(stderr);
-    fprintf(stderr, "%s\n", msg);
-    fflush(stderr);
+    fprintf(stdout, "[ ERROR ] ");
+    print_indent(stdout);
+    fprintf(stdout, "%s\n", msg);
+    fflush(stdout);
     exit(1);
 }
 
 EXPORT warn_t ss_warning(const char *msg) {
-    fprintf(stderr, "[ WARN  ] ");
-    print_indent(stderr);
-    fprintf(stderr, "%s\n", msg);
-    fflush(stderr);
+    fprintf(stdout, "[ WARN  ] ");
+    print_indent(stdout);
+    fprintf(stdout, "%s\n", msg);
+    fflush(stdout);
     return SS_WARN;
 }
 
 EXPORT warn_t ss_warning_fmt(const char *format, ...) {
-    fprintf(stderr, "[ WARN  ] ");
-    print_indent(stderr);
+    fprintf(stdout, "[ WARN  ] ");
+    print_indent(stdout);
     va_list va;
     va_start(va, format);
     vprintf(format, va);
     va_end(va);
-    fprintf(stderr, "\n");
-    fflush(stderr);
+    fprintf(stdout, "\n");
+    fflush(stdout);
     return SS_WARN;
 }
 

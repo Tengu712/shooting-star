@@ -69,6 +69,56 @@ typedef struct CameraData_t {
     } perse;
 } CameraData;
 
+#define NUM_OF_KEY_CODES 46
+typedef enum SsKeyCode_t {
+    KEY_CODE_A,
+    KEY_CODE_B,
+    KEY_CODE_C,
+    KEY_CODE_D,
+    KEY_CODE_E,
+    KEY_CODE_F,
+    KEY_CODE_G,
+    KEY_CODE_H,
+    KEY_CODE_I,
+    KEY_CODE_J,
+    KEY_CODE_K,
+    KEY_CODE_L,
+    KEY_CODE_M,
+    KEY_CODE_N,
+    KEY_CODE_O,
+    KEY_CODE_P,
+    KEY_CODE_Q,
+    KEY_CODE_R,
+    KEY_CODE_S,
+    KEY_CODE_T,
+    KEY_CODE_U,
+    KEY_CODE_V,
+    KEY_CODE_W,
+    KEY_CODE_X,
+    KEY_CODE_Y,
+    KEY_CODE_Z,
+    KEY_CODE_0,
+    KEY_CODE_1,
+    KEY_CODE_2,
+    KEY_CODE_3,
+    KEY_CODE_4,
+    KEY_CODE_5,
+    KEY_CODE_6,
+    KEY_CODE_7,
+    KEY_CODE_8,
+    KEY_CODE_9,
+    KEY_CODE_UP,
+    KEY_CODE_LEFT,
+    KEY_CODE_DOWN,
+    KEY_CODE_RIGHT,
+    KEY_CODE_ENTER,
+    KEY_CODE_SPACE,
+    KEY_CODE_SHIFT,
+    KEY_CODE_TAB,
+    KEY_CODE_CNTROL,
+    KEY_CODE_ESCAPE,
+} SsKeyCode;
+
 typedef enum RenderingQueryType_t {
     RENDERING_QUERY_TYPE_MODEL,
     RENDERING_QUERY_TYPE_CAMERA,
@@ -90,7 +140,7 @@ typedef struct RenderingQuery_t {
 //   2. width: screen width
 //   3. height: screen height
 //   4. max_image_num: the max number of image textures
-EXPORT warn_t ss_init(const char *title, uint16_t width, uint16_t height, uint32_t max_image_num);
+EXPORT warn_t ss_init(const char *title, uint32_t width, uint32_t height, uint32_t max_image_num);
 
 // A function to terminate Shooting Star.
 EXPORT void ss_terminate(void);
@@ -117,3 +167,6 @@ EXPORT warn_t ss_load_image_from_file(const char *path, uint32_t *out_id);
 
 // A function to unload an image texture.
 EXPORT void ss_unload_image(uint32_t id);
+
+// A function to get a state of key_code input.
+EXPORT int32_t ss_get_input_state(SsKeyCode key_code);
