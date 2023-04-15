@@ -4,7 +4,6 @@
 #include <X11/Xutil.h>
 #include <X11/XKBlib.h>
 #include <X11/keysym.h>
-#include <X11/extensions/XInput2.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -15,7 +14,6 @@ static Display *g_display;
 static Window g_window;
 static Atom g_atom_protocols;
 static Atom g_atom_delete_window;
-static int g_xi_opcode;
 static int g_fd = -1;
 static int32_t g_input_states[NUM_OF_KEYCODES];
 
@@ -103,28 +101,13 @@ warn_t create_window(const char *title, uint32_t width, uint32_t height) {
     g_atom_delete_window = XInternAtom(g_display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(g_display, g_window, &g_atom_delete_window, 1);
 
+
     memset(g_input_states, 0, sizeof(int32_t) * NUM_OF_KEYCODES);
-
-    int dummy1, dummy2;
-    if (XQueryExtension(g_display, "XInputExtension", &g_xi_opcode, &dummy1, &dummy2) == False)
-        ss_error("failed to enable xinput.");
-
+    XSelectInput(g_display, g_window, KeyPressMask | KeyReleaseMask);
     if ((g_fd = open("/dev/input/js0", O_RDONLY | O_NONBLOCK)) < 0)
         ss_info("joystick not detected.");
     else
         ss_info("joystick detected.");
-
-    int mask_len = XIMaskLen(XI_LASTEVENT);
-    unsigned char mask[mask_len];
-    memset(mask, 0, sizeof(mask));
-    XISetMask(mask, XI_KeyPress);
-    XISetMask(mask, XI_KeyRelease);
-    XIEventMask event_mask = {
-        XIAllDevices,
-        mask_len,
-        mask,
-    };
-    XISelectEvents(g_display, DefaultRootWindow(g_display), &event_mask, 1);
 
     XMapWindow(g_display, g_window);
     XFlush(g_display);
@@ -147,21 +130,18 @@ int32_t do_window_events(void) {
             case ClientMessage:
                 if (event.xclient.message_type == g_atom_protocols && event.xclient.data.l[0] == g_atom_delete_window)
                     return 1;
-                break;
-        }
-        XGenericEventCookie *cookie = &event.xcookie;
-        if (cookie->type == GenericEvent && cookie->extension == g_xi_opcode && XGetEventData(g_display, cookie)) {
-            XIDeviceEvent *xi_event = cookie->data;
-            if (xi_event->evtype == XI_KeyPress) {
-                const KeySym key_sym = XkbKeycodeToKeysym(g_display, xi_event->detail, 0, 0);
+            case KeyPress: {
+                const KeySym key_sym = XkbKeycodeToKeysym(g_display, event.xkey.keycode, 0, 0);
                 const SsKeycode ss_keycode = convert_keycode_xcb_to_ss(key_sym);
                 input_state_changes[ss_keycode] = 1;
-            } else if (xi_event->evtype == XI_KeyRelease) {
-                const KeySym key_sym = XkbKeycodeToKeysym(g_display, xi_event->detail, 0, 0);
+                break;
+            }
+            case KeyRelease: {
+                const KeySym key_sym = XkbKeycodeToKeysym(g_display, event.xkey.keycode, 0, 0);
                 const SsKeycode ss_keycode = convert_keycode_xcb_to_ss(key_sym);
                 input_state_changes[ss_keycode] = 2;
+                break;
             }
-            XFreeEventData(g_display, cookie);
         }
     }
 
