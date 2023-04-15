@@ -226,7 +226,7 @@ fn generate_ninja() -> std::io::Result<()> {
     #[cfg(target_os = "windows")]
     buf_writer.write_all(b"    flags = -lvulkan-1")?;
     #[cfg(target_os = "linux")]
-    buf_writer.write_all(b"    flags = -fvisibility=hidden -lm -lX11 -lXi -lvulkan")?;
+    buf_writer.write_all(b"    flags = -fvisibility=hidden -lm -lX11 -lvulkan")?;
     buf_writer.write_all(b"\n")?;
     buf_writer.write_all(BUILD_AFTER)?;
 
