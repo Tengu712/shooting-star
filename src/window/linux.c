@@ -5,6 +5,10 @@
 #include <X11/XKBlib.h>
 #include <X11/keysym.h>
 #include <X11/extensions/XInput2.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/joystick.h>
 #include <string.h>
 
 static Display *g_display;
@@ -12,6 +16,7 @@ static Window g_window;
 static Atom g_atom_protocols;
 static Atom g_atom_delete_window;
 static int g_xi_opcode;
+static int g_fd = -1;
 static int32_t g_input_states[NUM_OF_KEYCODES];
 
 SsKeycode convert_keycode_xcb_to_ss(KeySym key_sym) {
@@ -98,9 +103,17 @@ warn_t create_window(const char *title, uint32_t width, uint32_t height) {
     g_atom_delete_window = XInternAtom(g_display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(g_display, g_window, &g_atom_delete_window, 1);
 
+    memset(g_input_states, 0, sizeof(int32_t) * NUM_OF_KEYCODES);
+
     int dummy1, dummy2;
     if (XQueryExtension(g_display, "XInputExtension", &g_xi_opcode, &dummy1, &dummy2) == False)
         ss_error("failed to enable xinput.");
+
+    if ((g_fd = open("/dev/input/js0", O_RDONLY | O_NONBLOCK)) < 0)
+        ss_info("joystick not detected.");
+    else
+        ss_info("joystick detected.");
+
     int mask_len = XIMaskLen(XI_LASTEVENT);
     unsigned char mask[mask_len];
     memset(mask, 0, sizeof(mask));
@@ -122,8 +135,11 @@ warn_t create_window(const char *title, uint32_t width, uint32_t height) {
 }
 
 int32_t do_window_events(void) {
-    char input_state_changes[NUM_OF_KEYCODES];
-    memset(input_state_changes, 0, sizeof(char) * NUM_OF_KEYCODES);
+    const size_t changes_cnt = NUM_OF_KB_KEYS + NUM_OF_JS_BUTTONS;
+    char input_state_changes[changes_cnt];
+    memset(input_state_changes, 0, sizeof(char) * changes_cnt);
+
+    // do events and get key input state changes
     XEvent event;
     while (XPending(g_display)) {
         XNextEvent(g_display, &event);
@@ -148,7 +164,24 @@ int32_t do_window_events(void) {
             XFreeEventData(g_display, cookie);
         }
     }
-    for (int i = 1; i < NUM_OF_KEYCODES; ++i) {
+
+    // monitor joystick
+    if (g_fd >= 0) {
+        struct js_event jevent;
+        const size_t js_event_size = sizeof(struct js_event);
+        ssize_t len = read(g_fd, &jevent, js_event_size);
+        if (len == js_event_size) {
+            if ((jevent.type & JS_EVENT_BUTTON) && jevent.number < NUM_OF_JS_BUTTONS)
+                input_state_changes[KEYCODE_JS_BUTTON_0 + jevent.number] = jevent.value == 1 ? 1 : 2;
+            else if ((jevent.type & JS_EVENT_AXIS) && jevent.number < NUM_OF_JS_AXES)
+                // NOTE: jevent.value is not 0/1.
+                // NOTE: while the joystick is tilted, the event will continue to occur.
+                g_input_states[KEYCODE_JS_AXIS_0 + jevent.number] = jevent.value;
+        }
+    }
+
+    // update input states
+    for (int i = 1; i < changes_cnt; ++i) {
         if (input_state_changes[i] == 1 && g_input_states[i] < 1)
             g_input_states[i] = 1;
         else if (input_state_changes[i] == 2)
@@ -158,6 +191,8 @@ int32_t do_window_events(void) {
         else if (g_input_states[i] < 0)
             g_input_states[i] = 0;
     }
+
+    // finish
     return 0;
 }
 

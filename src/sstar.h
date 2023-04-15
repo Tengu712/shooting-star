@@ -69,7 +69,12 @@ typedef struct CameraData_t {
     } perse;
 } CameraData;
 
-#define NUM_OF_KEYCODES 47
+#define NUM_OF_KB_KEYS 47
+#define NUM_OF_JS_BUTTONS 13
+#define NUM_OF_JS_AXES 6
+#define NUM_OF_KEYCODES 66
+
+// WARNING: it must be arranged in 1) keyborad keycodes, 2) joystick buttons, 3) joystick axes.
 typedef enum SsKeycode_t {
     NO_KEYCODE,
     KEYCODE_A,
@@ -118,6 +123,25 @@ typedef enum SsKeycode_t {
     KEYCODE_TAB,
     KEYCODE_CONTROL,
     KEYCODE_ESCAPE,
+    KEYCODE_JS_BUTTON_0,
+    KEYCODE_JS_BUTTON_1,
+    KEYCODE_JS_BUTTON_2,
+    KEYCODE_JS_BUTTON_3,
+    KEYCODE_JS_BUTTON_4,
+    KEYCODE_JS_BUTTON_5,
+    KEYCODE_JS_BUTTON_6,
+    KEYCODE_JS_BUTTON_7,
+    KEYCODE_JS_BUTTON_8,
+    KEYCODE_JS_BUTTON_9,
+    KEYCODE_JS_BUTTON_10,
+    KEYCODE_JS_BUTTON_11,
+    KEYCODE_JS_BUTTON_12,
+    KEYCODE_JS_AXIS_0,
+    KEYCODE_JS_AXIS_1,
+    KEYCODE_JS_AXIS_2,
+    KEYCODE_JS_AXIS_3,
+    KEYCODE_JS_AXIS_4,
+    KEYCODE_JS_AXIS_5,
 } SsKeycode;
 
 typedef enum RenderingQueryType_t {
@@ -170,4 +194,9 @@ EXPORT warn_t ss_load_image_from_file(const char *path, uint32_t *out_id);
 EXPORT void ss_unload_image(uint32_t id);
 
 // A function to get a state of keycode input.
+// For keyboard keys and joystick buttons:
+//   * result > 0 : pressed and the frame count
+//   * result = 0 : neutral
+//   * result < 0 : upped
+// For joystick axes, the result is the degree of tilt of stick.
 EXPORT int32_t ss_get_input_state(SsKeycode keycode);
