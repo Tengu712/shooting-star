@@ -2,14 +2,14 @@
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
-#include <X11/extensions/XInput.h>
+#include <X11/extensions/XInput2.h>
 #include <string.h>
 
 static Display *g_display;
 static Window g_window;
 static Atom g_atom_protocols;
 static Atom g_atom_delete_window;
-static XDevice *g_device;
+static int g_xi_opcode;
 static int32_t g_key_states[NUM_OF_KEY_CODES];
 
 // TODO:
@@ -50,23 +50,19 @@ warn_t create_window(const char *title, uint32_t width, uint32_t height) {
     g_atom_delete_window = XInternAtom(g_display, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(g_display, g_window, &g_atom_delete_window, 1);
 
-    ss_debug("aaa");
-    int opcode, event, error;
-    if (!XQueryExtension(g_display, "XInputExtension", &opcode, &event, &error))
-        ss_error("failed to enable XInput extension.");
-    ss_debug("bbb");
-    int info_cnt;
-    const XDeviceInfoPtr info = XListInputDevices(g_display, &info_cnt);
-    if (info == NULL)
-        ss_error("failed to enumerate input devices.");
-    for (int i = 0; i < info_cnt; ++i) {
-        if (info[i].use == IsXKeyboard) {
-            ss_debug("%s", info[i].name);
-            g_device = XOpenDevice(g_display, info[i].id);
-            break;
-        }
-    }
-    XFreeDeviceList(info);
+    int dummy1, dummy2;
+    if (XQueryExtension(g_display, "XInputExtension", &g_xi_opcode, &dummy1, &dummy2) == False)
+        ss_error("failed to enable xinput.");
+    int mask_len = XIMaskLen(XI_LASTEVENT);
+    unsigned char mask[mask_len];
+    memset(mask, 0, sizeof(mask));
+    XISetMask(mask, XI_KeyPress);
+    XIEventMask event_mask = {
+        XIAllDevices,
+        mask_len,
+        mask,
+    };
+    XISelectEvents(g_display, DefaultRootWindow(g_display), &event_mask, 1);
 
     XMapWindow(g_display, g_window);
     XFlush(g_display);
@@ -85,6 +81,12 @@ int32_t do_window_events(void) {
                 if (event.xclient.message_type == g_atom_protocols && event.xclient.data.l[0] == g_atom_delete_window)
                     return 1;
                 break;
+        }
+        XGenericEventCookie *cookie = &event.xcookie;
+        if (cookie->type == GenericEvent && cookie->extension == g_xi_opcode && XGetEventData(g_display, cookie)) {
+            XIDeviceEvent *xi_event = cookie->data;
+            if (xi_event->evtype == XI_KeyPress) ss_debug("%d", xi_event->detail);
+            XFreeEventData(g_display, cookie);
         }
     }
     return 0;
