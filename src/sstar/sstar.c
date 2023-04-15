@@ -80,6 +80,6 @@ EXPORT void ss_unload_image(uint32_t id) {
     unload_image(id);
 }
 
-EXPORT int32_t ss_get_input_state(SsKeyCode key_code) {
-    return get_input_state(key_code);
+EXPORT int32_t ss_get_input_state(SsKeycode keycode) {
+    return get_input_state(keycode);
 }

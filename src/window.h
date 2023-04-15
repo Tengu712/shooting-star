@@ -16,4 +16,4 @@ int32_t do_window_events(void);
 // A terminator function.
 void terminate_window(void);
 
-int32_t get_input_state(SsKeyCode key_code);
+int32_t get_input_state(SsKeycode keycode);
