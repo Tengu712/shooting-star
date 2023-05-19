@@ -224,7 +224,7 @@ fn generate_ninja() -> std::io::Result<()> {
     buf_writer.write_all(ofiles.join(" $\n    ").as_bytes())?;
     buf_writer.write_all(b"\n")?;
     #[cfg(target_os = "windows")]
-    buf_writer.write_all(b"    flags = -lvulkan-1")?;
+    buf_writer.write_all(b"    flags = -lvulkan-1 -lXinput")?;
     #[cfg(target_os = "linux")]
     buf_writer.write_all(b"    flags = -fvisibility=hidden -lm -lX11 -lvulkan")?;
     buf_writer.write_all(b"\n")?;

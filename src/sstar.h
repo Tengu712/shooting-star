@@ -70,9 +70,9 @@ typedef struct CameraData_t {
 } CameraData;
 
 #define NUM_OF_KB_KEYS 47
-#define NUM_OF_JS_BUTTONS 13
+#define NUM_OF_JS_BUTTONS 14
 #define NUM_OF_JS_AXES 6
-#define NUM_OF_KEYCODES 66
+#define NUM_OF_KEYCODES 67
 
 // WARNING: it must be arranged in 1) keyborad keycodes, 2) joystick buttons, 3) joystick axes.
 typedef enum SsKeycode_t {
@@ -136,6 +136,7 @@ typedef enum SsKeycode_t {
     KEYCODE_JS_BUTTON_10,
     KEYCODE_JS_BUTTON_11,
     KEYCODE_JS_BUTTON_12,
+    KEYCODE_JS_BUTTON_13,
     KEYCODE_JS_AXIS_0,
     KEYCODE_JS_AXIS_1,
     KEYCODE_JS_AXIS_2,

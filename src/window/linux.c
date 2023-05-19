@@ -17,7 +17,7 @@ static Atom g_atom_delete_window;
 static int g_fd = -1;
 static int32_t g_input_states[NUM_OF_KEYCODES];
 
-SsKeycode convert_keycode_xcb_to_ss(KeySym key_sym) {
+static SsKeycode convert_keycode_xcb_to_ss(KeySym key_sym) {
     switch (key_sym) {
         case XK_a: return KEYCODE_A;
         case XK_b: return KEYCODE_B;
