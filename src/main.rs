@@ -1,0 +1,16 @@
+mod log;
+#[allow(non_upper_case_globals)]
+#[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+mod tpl;
+mod vulkan;
+mod window;
+
+fn main() {
+    let window_app = window::WindowApp::new("Sample Program\0", 640, 480);
+    let vulkan_app = vulkan::VulkanApp::new();
+    while window_app.do_events() {}
+    vulkan_app.terminate();
+    window_app.terminate();
+}

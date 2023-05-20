@@ -1,16 +1,3 @@
-/build/
-/tmp/
+/target
 
-/.ninja_log
-/build.ninja
-/dev
-
-*.a
-*.lib
-*.o
-*.obj
-
-*.out
-*.exe
-*.pdb
-*.dll
+/src/tpl.rs

@@ -12,25 +12,20 @@ Look at [docs/usage.md](./docs/usage.md).
 
 Following commands are required:
 
-* ninja
-* gcc
-* rustc
-* glslc
+* cargo (or rustc)
+* bindgen (install by `cargo install bindgen`)
 
 Following dependencies are required:
 
 * Linux
-  * xcb
+  * x11
   * vulkan
 * Windows
+  * xinput
   * vulkan-1
 
-Use a subtool [dev](./subtools/dev) to build this project:
-
 ```
-$ git clone <this-repository>
-$ cd Shooting-Star
-$ rustc -o ./dev ./subtools/dev/dev.rs
-$ ./dev init
-$ ninja
+$ bindgen tpl.h -o src/tpl.rs
+$ cargo test
+$ cargo build
 ```
