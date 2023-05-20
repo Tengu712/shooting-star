@@ -184,6 +184,15 @@ pub fn VK_MAKE_API_VERSION(variant: u32, major: u32, minor: u32, patch: u32) -> 
     (variant << 29) | (major << 22) | (minor << 12) | patch
 }
 
+impl Default for VkExtent2D {
+    fn default() -> Self {
+        Self {
+            width: 0,
+            height: 0,
+        }
+    }
+}
+
 impl Default for VkPhysicalDeviceMemoryProperties {
     fn default() -> Self {
         let mem_type = VkMemoryType {
@@ -211,6 +220,32 @@ impl Default for VkQueueFamilyProperties {
                 height: 0,
                 depth: 0,
             },
+        }
+    }
+}
+
+impl Default for VkSurfaceFormatKHR {
+    fn default() -> Self {
+        Self {
+            format: 0,
+            colorSpace: 0,
+        }
+    }
+}
+
+impl Default for VkSurfaceCapabilitiesKHR {
+    fn default() -> Self {
+        Self {
+            minImageCount: 0,
+            maxImageCount: 0,
+            currentExtent: VkExtent2D::default(),
+            minImageExtent: VkExtent2D::default(),
+            maxImageExtent: VkExtent2D::default(),
+            maxImageArrayLayers: 0,
+            supportedTransforms: 0,
+            currentTransform: 0,
+            supportedCompositeAlpha: 0,
+            supportedUsageFlags: 0,
         }
     }
 }

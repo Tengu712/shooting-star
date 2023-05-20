@@ -1,5 +1,7 @@
-use super::*;
 use super::additions::*;
+use super::*;
+
+use crate::window::WindowApp;
 
 use std::os::raw::c_char;
 
@@ -36,7 +38,7 @@ const INST_EXT_NAMES: [*const c_char; 2] = [PCHAR_VK_KHR_surface, INST_EXT_NAME_
 const DEVICE_EXT_NAMES: [*const c_char; 1] = [PCHAR_VK_KHR_swapchain];
 
 impl VulkanApp {
-    pub fn new() -> Self {
+    pub fn new(window_app: &WindowApp) -> Self {
         let instance = {
             let ai = VkApplicationInfo {
                 sType: VkStructureType_VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -65,8 +67,7 @@ impl VulkanApp {
             instance
         };
 
-        let (phys_device, phys_device_mem_prop) = {
-            // physical device
+        let phys_device = {
             let mut cnt = 0;
             check_vk!(
                 vkEnumeratePhysicalDevices(instance, &mut cnt, null_mut()),
@@ -78,18 +79,16 @@ impl VulkanApp {
                 "failed to enumerate physical devices."
             );
             // TODO: select a physical device better.
-            let phys_device = if let Some(n) = phys_devices.get(0) {
-                n.clone()
-            } else {
-                ss_error("tried to get a physical device out of index.");
-            };
+            phys_devices
+                .get(0)
+                .unwrap_or_else(|| ss_error("tried to get a physical device out of index."))
+                .clone()
+        };
 
-            // physical device memory properties
-            let mut phys_device_mem_prop = VkPhysicalDeviceMemoryProperties::default();
-            unsafe { vkGetPhysicalDeviceMemoryProperties(phys_device, &mut phys_device_mem_prop) };
-
-            // finish
-            (phys_device, phys_device_mem_prop)
+        let phys_device_mem_props = {
+            let mut props = VkPhysicalDeviceMemoryProperties::default();
+            unsafe { vkGetPhysicalDeviceMemoryProperties(phys_device, &mut props) };
+            props
         };
 
         let queue_family_index = {
@@ -99,17 +98,12 @@ impl VulkanApp {
             unsafe {
                 vkGetPhysicalDeviceQueueFamilyProperties(phys_device, &mut cnt, props.as_mut_ptr())
             };
-            let mut queue_family_index = -1;
-            for (i, prop) in props.into_iter().enumerate() {
-                if (prop.queueFlags & VkQueueFlagBits_VK_QUEUE_GRAPHICS_BIT) > 0 {
-                    queue_family_index = i as i32;
-                }
-            }
-            check!(
-                queue_family_index >= 0,
-                "failed to find a queue family index."
-            );
-            queue_family_index as u32
+            props
+                .into_iter()
+                .enumerate()
+                .find(|(_, prop)| (prop.queueFlags & VkQueueFlagBits_VK_QUEUE_GRAPHICS_BIT) > 0)
+                .map(|(i, _)| i as u32)
+                .unwrap_or_else(|| ss_error("failed to find a queue family index."))
         };
 
         let device = {
@@ -141,11 +135,162 @@ impl VulkanApp {
             device
         };
 
-        // finish
+        let queue = {
+            let mut queue = null_mut();
+            unsafe { vkGetDeviceQueue(device, queue_family_index, 0, &mut queue) };
+            queue
+        };
+
+        let command_pool = {
+            let ci = VkCommandPoolCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                pNext: null(),
+                flags: VkCommandPoolCreateFlagBits_VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                queueFamilyIndex: queue_family_index,
+            };
+            let mut command_pool = null_mut();
+            check_vk!(
+                vkCreateCommandPool(device, &ci, null(), &mut command_pool),
+                "failed to create a command pool."
+            );
+            command_pool
+        };
+
+        #[cfg(target_os = "linux")]
+        let surface = {
+            let ci = VkXlibSurfaceCreateInfoKHR {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
+                pNext: null(),
+                flags: 0,
+                dpy: window_app.display,
+                window: window_app.window,
+            };
+            let mut surface = null_mut();
+            check_vk!(
+                vkCreateXlibSurfaceKHR(instance, &ci, null(), &mut surface),
+                "failed to create a xlib surface."
+            );
+            surface
+        };
+
+        let surface_format = {
+            let mut cnt = 0;
+            check_vk!(
+                vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, surface, &mut cnt, null_mut()),
+                "failed to get the number of surface formats."
+            );
+            let mut formats = vec![VkSurfaceFormatKHR::default(); cnt as usize];
+            check_vk!(
+                vkGetPhysicalDeviceSurfaceFormatsKHR(
+                    phys_device,
+                    surface,
+                    &mut cnt,
+                    formats.as_mut_ptr()
+                ),
+                "failed to get surface formats."
+            );
+            formats
+                .into_iter()
+                .find(|n| n.format == VkFormat_VK_FORMAT_B8G8R8A8_UNORM)
+                .unwrap_or_else(|| ss_error("failed to get B8G8R8A8_UNORM surface format."))
+        };
+
+        let surface_capabilities = {
+            let mut surface_capabilities = VkSurfaceCapabilitiesKHR::default();
+            check_vk!(
+                vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+                    phys_device,
+                    surface,
+                    &mut surface_capabilities,
+                ),
+                "failed to get surface capabilities."
+            );
+            surface_capabilities
+        };
+
+        let swapchain = {
+            let min_image_count = std::cmp::max(surface_capabilities.minImageCount, 2);
+            let ci = VkSwapchainCreateInfoKHR {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+                pNext: null(),
+                flags: 0,
+                surface,
+                minImageCount: min_image_count,
+                imageFormat: surface_format.format,
+                imageColorSpace: surface_format.colorSpace,
+                imageExtent: surface_capabilities.currentExtent,
+                imageArrayLayers: 1,
+                imageUsage: VkImageUsageFlagBits_VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                imageSharingMode: VkSharingMode_VK_SHARING_MODE_EXCLUSIVE,
+                queueFamilyIndexCount: 0,
+                pQueueFamilyIndices: null(),
+                preTransform: surface_capabilities.currentTransform,
+                compositeAlpha: VkCompositeAlphaFlagBitsKHR_VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+                presentMode: VkPresentModeKHR_VK_PRESENT_MODE_FIFO_KHR,
+                clipped: VK_TRUE,
+                oldSwapchain: null_mut(),
+            };
+            let mut swapchain = null_mut();
+            check_vk!(
+                vkCreateSwapchainKHR(device, &ci, null(), &mut swapchain),
+                "failed to create a swapchain."
+            );
+            swapchain
+        };
+
+        let image_views = {
+            let mut cnt = 0;
+            check_vk!(
+                vkGetSwapchainImagesKHR(device, swapchain, &mut cnt, null_mut()),
+                "failed to get the number of swapchain images."
+            );
+            let mut images = vec![null_mut(); cnt as usize];
+            check_vk!(
+                vkGetSwapchainImagesKHR(device, swapchain, &mut cnt, images.as_mut_ptr()),
+                "failed to get the number of swapchain images."
+            );
+            let mut ci = VkImageViewCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                image: null_mut(),
+                viewType: VkImageViewType_VK_IMAGE_VIEW_TYPE_2D,
+                format: surface_format.format,
+                components: VkComponentMapping {
+                    r: VkComponentSwizzle_VK_COMPONENT_SWIZZLE_R,
+                    g: VkComponentSwizzle_VK_COMPONENT_SWIZZLE_G,
+                    b: VkComponentSwizzle_VK_COMPONENT_SWIZZLE_B,
+                    a: VkComponentSwizzle_VK_COMPONENT_SWIZZLE_A,
+                },
+                subresourceRange: VkImageSubresourceRange {
+                    aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+                    baseMipLevel: 0,
+                    levelCount: 1,
+                    baseArrayLayer: 0,
+                    layerCount: 1,
+                },
+            };
+            let mut image_views = Vec::with_capacity(cnt as usize);
+            for image in images {
+                ci.image = image;
+                let mut image_view = null_mut();
+                check_vk!(
+                    vkCreateImageView(device, &ci, null(), &mut image_view),
+                    "failed to create an image view."
+                );
+                image_views.push(image_view);
+            }
+            image_views
+        };
+
         Self {
             instance,
-            phys_device_mem_prop,
+            phys_device_mem_props,
             device,
+            command_pool,
+            surface,
+            swapchain,
+            image_views,
         }
     }
 }
