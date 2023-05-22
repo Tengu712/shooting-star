@@ -12,9 +12,13 @@ Look at [docs/usage.md](./docs/usage.md).
 
 Following commands are required:
 
-* cargo (or rustc)
-* bindgen (install by `cargo install bindgen-cli`)
+* make (to create tpl.rs)
+* cargo (to build)
+
+Following subcommands are required:
+
 * clang (needed for bindgen)
+* bindgen (install by `cargo install bindgen-cli`)
 
 Following dependencies are required:
 
@@ -22,11 +26,12 @@ Following dependencies are required:
   * X11
   * vulkan
 * Windows
+  * user32
   * xinput
   * vulkan-1
 
 ```
-$ bindgen tpl.h -o src/tpl.rs
+$ make
 $ cargo test
 $ cargo build
 ```

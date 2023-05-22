@@ -60,7 +60,7 @@ impl VulkanApp {
                 ppEnabledExtensionNames: INST_EXT_NAMES.as_ptr(),
             };
             let mut instance = null_mut();
-            check_vk!(
+            check!(
                 vkCreateInstance(&ci, null(), &mut instance),
                 "failed to create a Vulkan instance."
             );
@@ -69,12 +69,12 @@ impl VulkanApp {
 
         let phys_device = {
             let mut cnt = 0;
-            check_vk!(
+            check!(
                 vkEnumeratePhysicalDevices(instance, &mut cnt, null_mut()),
                 "failed to get the number of physical devices."
             );
             let mut phys_devices = vec![null_mut(); cnt as usize];
-            check_vk!(
+            check!(
                 vkEnumeratePhysicalDevices(instance, &mut cnt, phys_devices.as_mut_ptr()),
                 "failed to enumerate physical devices."
             );
@@ -101,7 +101,9 @@ impl VulkanApp {
             props
                 .into_iter()
                 .enumerate()
-                .find(|(_, prop)| (prop.queueFlags & VkQueueFlagBits_VK_QUEUE_GRAPHICS_BIT) > 0)
+                .find(|(_, prop)| {
+                    (prop.queueFlags & VkQueueFlagBits_VK_QUEUE_GRAPHICS_BIT as u32) > 0
+                })
                 .map(|(i, _)| i as u32)
                 .unwrap_or_else(|| ss_error("failed to find a queue family index."))
         };
@@ -132,7 +134,7 @@ impl VulkanApp {
                 pEnabledFeatures: null(),
             };
             let mut device = null_mut();
-            check_vk!(
+            check!(
                 vkCreateDevice(phys_device, &ci, null(), &mut device),
                 "failed to create a device."
             );
@@ -149,11 +151,12 @@ impl VulkanApp {
             let ci = VkCommandPoolCreateInfo {
                 sType: VkStructureType_VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                 pNext: null(),
-                flags: VkCommandPoolCreateFlagBits_VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                flags: VkCommandPoolCreateFlagBits_VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
+                    as u32,
                 queueFamilyIndex: queue_family_index,
             };
             let mut command_pool = null_mut();
-            check_vk!(
+            check!(
                 vkCreateCommandPool(device, &ci, null(), &mut command_pool),
                 "failed to create a command pool."
             );
@@ -170,21 +173,37 @@ impl VulkanApp {
                 window: window_app.window,
             };
             let mut surface = null_mut();
-            check_vk!(
+            check!(
                 vkCreateXlibSurfaceKHR(instance, &ci, null(), &mut surface),
                 "failed to create a xlib surface."
+            );
+            surface
+        };
+        #[cfg(target_os = "windows")]
+        let surface = {
+            let ci = VkWin32SurfaceCreateInfoKHR {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+                pNext: null(),
+                flags: 0,
+                hinstance: window_app.inst,
+                hwnd: window_app.window,
+            };
+            let mut surface = null_mut();
+            check!(
+                vkCreateWin32SurfaceKHR(instance, &ci, null(), &mut surface),
+                "failed to create a win32 surface."
             );
             surface
         };
 
         let surface_format = {
             let mut cnt = 0;
-            check_vk!(
+            check!(
                 vkGetPhysicalDeviceSurfaceFormatsKHR(phys_device, surface, &mut cnt, null_mut()),
                 "failed to get the number of surface formats."
             );
             let mut formats = vec![VkSurfaceFormatKHR::default(); cnt as usize];
-            check_vk!(
+            check!(
                 vkGetPhysicalDeviceSurfaceFormatsKHR(
                     phys_device,
                     surface,
@@ -201,7 +220,7 @@ impl VulkanApp {
 
         let surface_capabilities = {
             let mut surface_capabilities = VkSurfaceCapabilitiesKHR::default();
-            check_vk!(
+            check!(
                 vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
                     phys_device,
                     surface,
@@ -224,7 +243,7 @@ impl VulkanApp {
                 imageColorSpace: surface_format.colorSpace,
                 imageExtent: surface_capabilities.currentExtent,
                 imageArrayLayers: 1,
-                imageUsage: VkImageUsageFlagBits_VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                imageUsage: VkImageUsageFlagBits_VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT as u32,
                 imageSharingMode: VkSharingMode_VK_SHARING_MODE_EXCLUSIVE,
                 queueFamilyIndexCount: 0,
                 pQueueFamilyIndices: null(),
@@ -235,7 +254,7 @@ impl VulkanApp {
                 oldSwapchain: null_mut(),
             };
             let mut swapchain = null_mut();
-            check_vk!(
+            check!(
                 vkCreateSwapchainKHR(device, &ci, null(), &mut swapchain),
                 "failed to create a swapchain."
             );
@@ -244,12 +263,12 @@ impl VulkanApp {
 
         let image_views = {
             let mut cnt = 0;
-            check_vk!(
+            check!(
                 vkGetSwapchainImagesKHR(device, swapchain, &mut cnt, null_mut()),
                 "failed to get the number of swapchain images."
             );
             let mut images = vec![null_mut(); cnt as usize];
-            check_vk!(
+            check!(
                 vkGetSwapchainImagesKHR(device, swapchain, &mut cnt, images.as_mut_ptr()),
                 "failed to get the number of swapchain images."
             );
@@ -267,7 +286,7 @@ impl VulkanApp {
                     a: VkComponentSwizzle_VK_COMPONENT_SWIZZLE_A,
                 },
                 subresourceRange: VkImageSubresourceRange {
-                    aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+                    aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT as u32,
                     baseMipLevel: 0,
                     levelCount: 1,
                     baseArrayLayer: 0,
@@ -278,7 +297,7 @@ impl VulkanApp {
             for image in images {
                 ci.image = image;
                 let mut image_view = null_mut();
-                check_vk!(
+                check!(
                     vkCreateImageView(device, &ci, null(), &mut image_view),
                     "failed to create an image view."
                 );
@@ -327,7 +346,7 @@ impl VulkanApp {
                 pDependencies: null(),
             };
             let mut render_pass = null_mut();
-            check_vk!(
+            check!(
                 vkCreateRenderPass(device, &ci, null(), &mut render_pass),
                 "failed to create a render pass."
             );
@@ -351,7 +370,7 @@ impl VulkanApp {
                 let attachments = [image_view.clone()];
                 ci.pAttachments = attachments.as_ptr();
                 let mut framebuffer = null_mut();
-                check_vk!(
+                check!(
                     vkCreateFramebuffer(device, &ci, null(), &mut framebuffer),
                     "failed to create a framebuffer."
                 );

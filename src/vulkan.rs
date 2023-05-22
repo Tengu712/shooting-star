@@ -2,7 +2,7 @@ use crate::log::*;
 use crate::tpl::*;
 use std::ptr::{null, null_mut};
 
-macro_rules! check_vk {
+macro_rules! check {
     ($p: expr, $m: expr) => {
         if unsafe { $p != VkResult_VK_SUCCESS } {
             ss_error($m);

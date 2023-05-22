@@ -6,7 +6,7 @@
 #  include <X11/Xutil.h>
 #else
 #  define VK_USE_PLATFORM_WIN32_KHR
-#  include <window.h>
+#  include <windows.h>
 #endif
 
 #include <vulkan/vulkan.h>
