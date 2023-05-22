@@ -5,7 +5,15 @@ use std::process::exit;
 pub fn ss_error(msg: &str) -> ! {
     let out = stdout();
     let mut out = BufWriter::new(out.lock());
-    write!(out, "[ error ] {}\n", msg).unwrap();
+    write!(out, "[ error   ] {}\n", msg).unwrap();
     out.flush().unwrap();
     exit(1);
+}
+
+/// A function to print a warning message.
+pub fn ss_warning(msg: &str) {
+    let out = stdout();
+    let mut out = BufWriter::new(out.lock());
+    write!(out, "[ warning ] {}\n", msg).unwrap();
+    out.flush().unwrap();
 }

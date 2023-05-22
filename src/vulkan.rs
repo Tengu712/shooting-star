@@ -10,18 +10,43 @@ macro_rules! check {
     };
 }
 
+macro_rules! check_warn {
+    ($p: expr, $m: expr) => {
+        if unsafe { $p != VkResult_VK_SUCCESS } {
+            ss_warning($m);
+            return;
+        }
+    };
+}
+
 mod additions;
 mod new;
+mod render;
 mod terminate;
 
 pub struct VulkanApp {
+    // core
     instance: VkInstance,
     phys_device_mem_props: VkPhysicalDeviceMemoryProperties,
     device: VkDevice,
+    // command
+    queue: VkQueue,
     command_pool: VkCommandPool,
+    // renderer
     surface: VkSurfaceKHR,
+    surface_capabilities: VkSurfaceCapabilitiesKHR,
     swapchain: VkSwapchainKHR,
     image_views: Vec<VkImageView>,
     render_pass: VkRenderPass,
     framebuffers: Vec<VkFramebuffer>,
+    // pipeline
+    // framedata
+    pre_img_idx: usize,
+    frames: Vec<Frame>,
+}
+
+pub struct Frame {
+    command_buffer: VkCommandBuffer,
+    fence: VkFence,
+    semaphore: VkSemaphore,
 }

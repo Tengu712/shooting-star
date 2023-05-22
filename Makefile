@@ -17,7 +17,23 @@ vkGetSwapchainImagesKHR|$\
 vkCreateImageView|$\
 vkCreateRenderPass|$\
 vkCreateFramebuffer|$\
+vkAllocateCommandBuffers|$\
+vkCreateFence|$\
+vkCreateSemaphore|$\
+vkAcquireNextImageKHR|$\
+vkWaitForFences|$\
+vkResetFences|$\
+vkResetCommandBuffer|$\
+vkBeginCommandBuffer|$\
+vkCmdBeginRenderPass|$\
+vkCmdEndRenderPass|$\
+vkEndCommandBuffer|$\
+vkQueueSubmit|$\
+vkQueuePresentKHR|$\
 vkDeviceWaitIdle|$\
+vkDestroySemaphore|$\
+vkDestroyFence|$\
+vkFreeCommandBuffers|$\
 vkDestroyFramebuffer|$\
 vkDestroyRenderPass|$\
 vkDestroyImageView|$\
@@ -31,10 +47,34 @@ vulkan_type=$\
 VkQueueFlagBits|$\
 VkCommandPoolCreateFlagBits|$\
 VkImageUsageFlagBits|$\
-VkImageAspectFlagBits
+VkImageAspectFlagBits|$\
+VkFenceCreateFlagBits|$\
+VkCommandBufferResetFlagBits|$\
+VkPipelineStageFlagBits
 
 vulkan_var=$\
 VK_TRUE
+
+linux_function=$\
+XOpenDisplay|$\
+XCreateSimpleWindow|$\
+XDefaultRootWindow|$\
+XStoreName|$\
+XSetWMNormalHints|$\
+XInternAtom|$\
+XSetWMProtocols|$\
+XMapWindow|$\
+XFlush|$\
+XPending|$\
+XNextEvent
+
+linux_type=$\
+
+linux_var=$\
+PMinSize|$\
+PMaxSize|$\
+False|$\
+ClientMessage
 
 windows_function=$\
 GetModuleHandleW|$\
@@ -65,9 +105,15 @@ PM_REMOVE|$\
 WM_QUIT|$\
 WM_DESTROY
 
-allowlist_function='$(vulkan_function)|$(windows_function)'
-allowlist_type='$(vulkan_type)|$(windows_type)'
-allowlist_var='$(vulkan_var)|$(windows_var)'
+ifeq ($(OS),Windows_NT)
+  allowlist_function='$(vulkan_function)|$(windows_function)'
+  allowlist_type='$(vulkan_type)|$(windows_type)'
+  allowlist_var='$(vulkan_var)|$(windows_var)'
+else
+  allowlist_function='$(vulkan_function)|$(linux_function)'
+  allowlist_type='$(vulkan_type)|$(linux_type)'
+  allowlist_var='$(vulkan_var)|$(linux_var)'
+endif
 
 bindgen:
 	bindgen \

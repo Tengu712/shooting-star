@@ -4,6 +4,11 @@ impl VulkanApp {
     pub fn terminate(self) {
         unsafe {
             vkDeviceWaitIdle(self.device);
+            for frame in self.frames {
+                vkDestroySemaphore(self.device, frame.semaphore, null());
+                vkDestroyFence(self.device, frame.fence, null());
+                vkFreeCommandBuffers(self.device, self.command_pool, 1, &frame.command_buffer);
+            }
             for framebuffer in self.framebuffers {
                 vkDestroyFramebuffer(self.device, framebuffer, null());
             }

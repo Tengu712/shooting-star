@@ -249,3 +249,9 @@ impl Default for VkSurfaceCapabilitiesKHR {
         }
     }
 }
+
+impl Default for VkOffset2D {
+    fn default() -> Self {
+        Self { x: 0, y: 0 }
+    }
+}
