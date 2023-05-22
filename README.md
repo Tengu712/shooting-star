@@ -13,12 +13,13 @@ Look at [docs/usage.md](./docs/usage.md).
 Following commands are required:
 
 * cargo (or rustc)
-* bindgen (install by `cargo install bindgen`)
+* bindgen (install by `cargo install bindgen-cli`)
+* clang (needed for bindgen)
 
 Following dependencies are required:
 
 * Linux
-  * x11
+  * X11
   * vulkan
 * Windows
   * xinput

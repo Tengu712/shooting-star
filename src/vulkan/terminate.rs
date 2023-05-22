@@ -4,6 +4,10 @@ impl VulkanApp {
     pub fn terminate(self) {
         unsafe {
             vkDeviceWaitIdle(self.device);
+            for framebuffer in self.framebuffers {
+                vkDestroyFramebuffer(self.device, framebuffer, null());
+            }
+            vkDestroyRenderPass(self.device, self.render_pass, null());
             for image_view in self.image_views {
                 vkDestroyImageView(self.device, image_view, null());
             }

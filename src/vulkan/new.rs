@@ -112,6 +112,10 @@ impl VulkanApp {
                 pNext: null(),
                 flags: 0,
                 queueFamilyIndex: queue_family_index,
+                // REVIEW: should i changed:
+                // REVIEW:   let queue_priorities = [1.0];
+                // REVIEW:     queueCount: queue_priorities.len() as u32,
+                // REVIEW:     pQueuePriorities: queue_priorities.as_ptr(),
                 queueCount: 1,
                 pQueuePriorities: [1.0].as_ptr(),
             }];
@@ -283,6 +287,79 @@ impl VulkanApp {
             image_views
         };
 
+        let (render_pass, attachments_count) = {
+            let attachment_descs = [VkAttachmentDescription {
+                flags: 0,
+                format: surface_format.format,
+                samples: VkSampleCountFlagBits_VK_SAMPLE_COUNT_1_BIT,
+                loadOp: VkAttachmentLoadOp_VK_ATTACHMENT_LOAD_OP_CLEAR,
+                storeOp: VkAttachmentStoreOp_VK_ATTACHMENT_STORE_OP_STORE,
+                stencilLoadOp: VkAttachmentLoadOp_VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+                stencilStoreOp: VkAttachmentStoreOp_VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                initialLayout: VkImageLayout_VK_IMAGE_LAYOUT_UNDEFINED,
+                finalLayout: VkImageLayout_VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            }];
+            let color_refs = [VkAttachmentReference {
+                attachment: 0,
+                layout: VkImageLayout_VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            }];
+            let subpass_descs = [VkSubpassDescription {
+                flags: 0,
+                pipelineBindPoint: VkPipelineBindPoint_VK_PIPELINE_BIND_POINT_GRAPHICS,
+                inputAttachmentCount: 0,
+                pInputAttachments: null(),
+                colorAttachmentCount: color_refs.len() as u32,
+                pColorAttachments: color_refs.as_ptr(),
+                pResolveAttachments: null(),
+                pDepthStencilAttachment: null(),
+                preserveAttachmentCount: 0,
+                pPreserveAttachments: null(),
+            }];
+            let ci = VkRenderPassCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                attachmentCount: attachment_descs.len() as u32,
+                pAttachments: attachment_descs.as_ptr(),
+                subpassCount: subpass_descs.len() as u32,
+                pSubpasses: subpass_descs.as_ptr(),
+                dependencyCount: 0,
+                pDependencies: null(),
+            };
+            let mut render_pass = null_mut();
+            check_vk!(
+                vkCreateRenderPass(device, &ci, null(), &mut render_pass),
+                "failed to create a render pass."
+            );
+            (render_pass, attachment_descs.len() as u32)
+        };
+
+        let framebuffers = {
+            let mut ci = VkFramebufferCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                renderPass: render_pass,
+                attachmentCount: attachments_count,
+                pAttachments: null(),
+                width: surface_capabilities.currentExtent.width,
+                height: surface_capabilities.currentExtent.height,
+                layers: 1,
+            };
+            let mut framebuffers = Vec::with_capacity(image_views.len());
+            for image_view in image_views.iter() {
+                let attachments = [image_view.clone()];
+                ci.pAttachments = attachments.as_ptr();
+                let mut framebuffer = null_mut();
+                check_vk!(
+                    vkCreateFramebuffer(device, &ci, null(), &mut framebuffer),
+                    "failed to create a framebuffer."
+                );
+                framebuffers.push(framebuffer);
+            }
+            framebuffers
+        };
+
         Self {
             instance,
             phys_device_mem_props,
@@ -291,6 +368,8 @@ impl VulkanApp {
             surface,
             swapchain,
             image_views,
+            render_pass,
+            framebuffers,
         }
     }
 }

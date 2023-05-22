@@ -22,4 +22,6 @@ pub struct VulkanApp {
     surface: VkSurfaceKHR,
     swapchain: VkSwapchainKHR,
     image_views: Vec<VkImageView>,
+    render_pass: VkRenderPass,
+    framebuffers: Vec<VkFramebuffer>,
 }
