@@ -163,6 +163,55 @@ impl VulkanApp {
             command_pool
         };
 
+        let command_buffer = {
+            let ai = VkCommandBufferAllocateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                pNext: null(),
+                commandPool: command_pool,
+                level: VkCommandBufferLevel_VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                commandBufferCount: 1,
+            };
+            let mut command_buffer = null_mut();
+            check!(
+                vkAllocateCommandBuffers(device, &ai, &mut command_buffer),
+                "failed to create a command buffer."
+            );
+            command_buffer
+        };
+
+        let fence = {
+            let ci = VkFenceCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                pNext: null(),
+                flags: VkFenceCreateFlagBits_VK_FENCE_CREATE_SIGNALED_BIT,
+            };
+            let mut fence = null_mut();
+            check!(
+                vkCreateFence(device, &ci, null(), &mut fence),
+                "failed to create a fence."
+            );
+            fence
+        };
+
+        let (before_semaphore, complete_semaphore) = {
+            let ci = VkSemaphoreCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+            };
+            let mut before_semaphore = null_mut();
+            check!(
+                vkCreateSemaphore(device, &ci, null(), &mut before_semaphore),
+                "failed to create a semaphore."
+            );
+            let mut complete_semaphore = null_mut();
+            check!(
+                vkCreateSemaphore(device, &ci, null(), &mut complete_semaphore),
+                "failed to create a semaphore."
+            );
+            (before_semaphore, complete_semaphore)
+        };
+
         #[cfg(target_os = "linux")]
         let surface = {
             let ci = VkXlibSurfaceCreateInfoKHR {
@@ -379,64 +428,22 @@ impl VulkanApp {
             framebuffers
         };
 
-        let frames = {
-            let cmd_ai = VkCommandBufferAllocateInfo {
-                sType: VkStructureType_VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-                pNext: null(),
-                commandPool: command_pool,
-                level: VkCommandBufferLevel_VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                commandBufferCount: 1,
-            };
-            let fence_ci = VkFenceCreateInfo {
-                sType: VkStructureType_VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-                pNext: null(),
-                flags: VkFenceCreateFlagBits_VK_FENCE_CREATE_SIGNALED_BIT,
-            };
-            let semaphore_ci = VkSemaphoreCreateInfo {
-                sType: VkStructureType_VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-                pNext: null(),
-                flags: 0,
-            };
-            let mut frames = Vec::with_capacity(image_views.len());
-            for _ in 0..image_views.len() {
-                let mut command_buffer = null_mut();
-                let mut fence = null_mut();
-                let mut semaphore = null_mut();
-                check!(
-                    vkAllocateCommandBuffers(device, &cmd_ai, &mut command_buffer),
-                    "failed to create a command buffer."
-                );
-                check!(
-                    vkCreateFence(device, &fence_ci, null(), &mut fence),
-                    "failed to create a fence."
-                );
-                check!(
-                    vkCreateSemaphore(device, &semaphore_ci, null(), &mut semaphore),
-                    "failed to create a semaphore."
-                );
-                frames.push(Frame {
-                    command_buffer,
-                    fence,
-                    semaphore,
-                });
-            }
-            frames
-        };
-
         Self {
             instance,
             phys_device_mem_props,
             device,
             queue,
             command_pool,
+            command_buffer,
+            fence,
+            before_semaphore,
+            complete_semaphore,
             surface,
             surface_capabilities,
             swapchain,
             image_views,
             render_pass,
             framebuffers,
-            pre_img_idx: 0,
-            frames,
         }
     }
 }

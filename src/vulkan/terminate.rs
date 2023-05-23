@@ -4,11 +4,6 @@ impl VulkanApp {
     pub fn terminate(self) {
         unsafe {
             vkDeviceWaitIdle(self.device);
-            for frame in self.frames {
-                vkDestroySemaphore(self.device, frame.semaphore, null());
-                vkDestroyFence(self.device, frame.fence, null());
-                vkFreeCommandBuffers(self.device, self.command_pool, 1, &frame.command_buffer);
-            }
             for framebuffer in self.framebuffers {
                 vkDestroyFramebuffer(self.device, framebuffer, null());
             }
@@ -18,6 +13,10 @@ impl VulkanApp {
             }
             vkDestroySwapchainKHR(self.device, self.swapchain, null());
             vkDestroySurfaceKHR(self.instance, self.surface, null());
+            vkDestroySemaphore(self.device, self.complete_semaphore, null());
+            vkDestroySemaphore(self.device, self.before_semaphore, null());
+            vkDestroyFence(self.device, self.fence, null());
+            vkFreeCommandBuffers(self.device, self.command_pool, 1, &self.command_buffer);
             vkDestroyCommandPool(self.device, self.command_pool, null());
             vkDestroyDevice(self.device, null());
             vkDestroyInstance(self.instance, null());

@@ -1,28 +1,26 @@
 use super::*;
 
 impl VulkanApp {
-    pub fn render(&mut self) {
+    pub fn render(&self) {
         // prepare
 
         // get current image index
-        let mut cur_img_idx = 0;
+        let mut img_idx = 0;
         check_warn!(
             vkAcquireNextImageKHR(
                 self.device,
                 self.swapchain,
                 u64::MAX,
-                self.frames[self.pre_img_idx].semaphore, // XXX: what is it?
+                self.before_semaphore,
                 null_mut(),
-                &mut cur_img_idx
+                &mut img_idx
             ),
             "failed to aquire the next image index."
         );
-        let cur_img_idx = cur_img_idx as usize;
-        let pre_img_idx = self.pre_img_idx;
-        let command = self.frames[cur_img_idx].command_buffer;
+        let img_idx = img_idx;
 
         // reset frame data
-        let fences = [self.frames[cur_img_idx].fence];
+        let fences = [self.fence];
         check_warn!(
             vkWaitForFences(
                 self.device,
@@ -39,7 +37,7 @@ impl VulkanApp {
         );
         check_warn!(
             vkResetCommandBuffer(
-                command,
+                self.command_buffer,
                 VkCommandBufferResetFlagBits_VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT
             ),
             "failed to reset a command buffer."
@@ -55,7 +53,7 @@ impl VulkanApp {
             pInheritanceInfo: null(),
         };
         check_warn!(
-            vkBeginCommandBuffer(command, &cmd_bi),
+            vkBeginCommandBuffer(self.command_buffer, &cmd_bi),
             "failed to begin to record commands."
         );
 
@@ -69,7 +67,7 @@ impl VulkanApp {
             sType: VkStructureType_VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             pNext: null(),
             renderPass: self.render_pass,
-            framebuffer: self.framebuffers[cur_img_idx],
+            framebuffer: self.framebuffers[img_idx as usize],
             renderArea: VkRect2D {
                 offset: VkOffset2D::default(),
                 extent: self.surface_capabilities.currentExtent,
@@ -79,7 +77,7 @@ impl VulkanApp {
         };
         unsafe {
             vkCmdBeginRenderPass(
-                command,
+                self.command_buffer,
                 &rp_bi,
                 VkSubpassContents_VK_SUBPASS_CONTENTS_INLINE,
             )
@@ -88,14 +86,13 @@ impl VulkanApp {
         // end
 
         // end to record commands
-        unsafe { vkCmdEndRenderPass(command) };
-        unsafe { vkEndCommandBuffer(command) };
+        unsafe { vkCmdEndRenderPass(self.command_buffer) };
+        unsafe { vkEndCommandBuffer(self.command_buffer) };
 
         // submit
-        let commands = [command];
-        // XXX: what should i pass?
-        let wait_semaphores = [self.frames[pre_img_idx].semaphore];
-        let signal_semaphores = [self.frames[cur_img_idx].semaphore];
+        let commands = [self.command_buffer];
+        let wait_semaphores = [self.before_semaphore];
+        let signal_semaphores = [self.complete_semaphore];
         let sis = [VkSubmitInfo {
             sType: VkStructureType_VK_STRUCTURE_TYPE_SUBMIT_INFO,
             pNext: null(),
@@ -109,19 +106,14 @@ impl VulkanApp {
             pSignalSemaphores: signal_semaphores.as_ptr(),
         }];
         check_warn!(
-            vkQueueSubmit(
-                self.queue,
-                sis.len() as u32,
-                sis.as_ptr(),
-                self.frames[cur_img_idx].fence
-            ),
+            vkQueueSubmit(self.queue, sis.len() as u32, sis.as_ptr(), self.fence,),
             "failed to submit a command buffer."
         );
 
         // present
         let mut res = 0;
         let swapchains = [self.swapchain];
-        let image_indices = [cur_img_idx as u32];
+        let image_indices = [img_idx];
         let pi = VkPresentInfoKHR {
             sType: VkStructureType_VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             pNext: null(),
@@ -136,9 +128,8 @@ impl VulkanApp {
             vkQueuePresentKHR(self.queue, &pi),
             "failed to enqueue a present queue."
         );
-        check_warn!(res, "failed to present.");
-
-        // finish
-        self.pre_img_idx = cur_img_idx;
+        if res != VkResult_VK_SUCCESS {
+            ss_warning("failed to present.");
+        }
     }
 }

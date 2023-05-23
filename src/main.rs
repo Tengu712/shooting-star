@@ -9,7 +9,7 @@ mod window;
 
 fn main() {
     let window_app = window::WindowApp::new("Sample Program\0", 640, 480);
-    let mut vulkan_app = vulkan::VulkanApp::new(&window_app);
+    let vulkan_app = vulkan::VulkanApp::new(&window_app);
     while window_app.do_events() {
         vulkan_app.render();
     }

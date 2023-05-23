@@ -32,6 +32,10 @@ pub struct VulkanApp {
     // command
     queue: VkQueue,
     command_pool: VkCommandPool,
+    command_buffer: VkCommandBuffer,
+    fence: VkFence,
+    before_semaphore: VkSemaphore,
+    complete_semaphore: VkSemaphore,
     // renderer
     surface: VkSurfaceKHR,
     surface_capabilities: VkSurfaceCapabilitiesKHR,
@@ -40,13 +44,4 @@ pub struct VulkanApp {
     render_pass: VkRenderPass,
     framebuffers: Vec<VkFramebuffer>,
     // pipeline
-    // framedata
-    pre_img_idx: usize,
-    frames: Vec<Frame>,
-}
-
-pub struct Frame {
-    command_buffer: VkCommandBuffer,
-    fence: VkFence,
-    semaphore: VkSemaphore,
 }
