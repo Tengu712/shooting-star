@@ -13,8 +13,8 @@ impl VulkanApp {
             }
             vkDestroySwapchainKHR(self.device, self.swapchain, null());
             vkDestroySurfaceKHR(self.instance, self.surface, null());
-            vkDestroySemaphore(self.device, self.complete_semaphore, null());
-            vkDestroySemaphore(self.device, self.before_semaphore, null());
+            vkDestroySemaphore(self.device, self.signal_semaphore, null());
+            vkDestroySemaphore(self.device, self.wait_semaphore, null());
             vkDestroyFence(self.device, self.fence, null());
             vkFreeCommandBuffers(self.device, self.command_pool, 1, &self.command_buffer);
             vkDestroyCommandPool(self.device, self.command_pool, null());

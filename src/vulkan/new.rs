@@ -100,11 +100,8 @@ impl VulkanApp {
             };
             props
                 .into_iter()
-                .enumerate()
-                .find(|(_, prop)| {
-                    (prop.queueFlags & VkQueueFlagBits_VK_QUEUE_GRAPHICS_BIT as u32) > 0
-                })
-                .map(|(i, _)| i as u32)
+                .position(|n| (n.queueFlags & VkQueueFlagBits_VK_QUEUE_GRAPHICS_BIT as u32) > 0)
+                .map(|i| i as u32)
                 .unwrap_or_else(|| ss_error("failed to find a queue family index."))
         };
 
@@ -193,23 +190,23 @@ impl VulkanApp {
             fence
         };
 
-        let (before_semaphore, complete_semaphore) = {
+        let (wait_semaphore, signal_semaphore) = {
             let ci = VkSemaphoreCreateInfo {
                 sType: VkStructureType_VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
                 pNext: null(),
                 flags: 0,
             };
-            let mut before_semaphore = null_mut();
+            let mut wait_semaphore = null_mut();
             check!(
-                vkCreateSemaphore(device, &ci, null(), &mut before_semaphore),
+                vkCreateSemaphore(device, &ci, null(), &mut wait_semaphore),
                 "failed to create a semaphore."
             );
-            let mut complete_semaphore = null_mut();
+            let mut signal_semaphore = null_mut();
             check!(
-                vkCreateSemaphore(device, &ci, null(), &mut complete_semaphore),
+                vkCreateSemaphore(device, &ci, null(), &mut signal_semaphore),
                 "failed to create a semaphore."
             );
-            (before_semaphore, complete_semaphore)
+            (wait_semaphore, signal_semaphore)
         };
 
         #[cfg(target_os = "linux")]
@@ -436,8 +433,8 @@ impl VulkanApp {
             command_pool,
             command_buffer,
             fence,
-            before_semaphore,
-            complete_semaphore,
+            wait_semaphore,
+            signal_semaphore,
             surface,
             surface_capabilities,
             swapchain,

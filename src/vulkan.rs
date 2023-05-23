@@ -1,5 +1,6 @@
 use crate::log::*;
 use crate::tpl::*;
+
 use std::ptr::{null, null_mut};
 
 macro_rules! check {
@@ -34,8 +35,8 @@ pub struct VulkanApp {
     command_pool: VkCommandPool,
     command_buffer: VkCommandBuffer,
     fence: VkFence,
-    before_semaphore: VkSemaphore,
-    complete_semaphore: VkSemaphore,
+    wait_semaphore: VkSemaphore,
+    signal_semaphore: VkSemaphore,
     // renderer
     surface: VkSurfaceKHR,
     surface_capabilities: VkSurfaceCapabilitiesKHR,
