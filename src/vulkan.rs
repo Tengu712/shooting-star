@@ -32,7 +32,7 @@ use additions::*;
 use buffer::*;
 use model::*;
 
-pub struct VulkanApp {
+pub(crate) struct VulkanApp {
     // core
     instance: VkInstance,
     phys_device_mem_props: VkPhysicalDeviceMemoryProperties,
@@ -89,6 +89,7 @@ struct Vertex {
     in_uv: [f32; 2],
 }
 
+/// A function to create a persepective projection matrix.
 pub fn create_perse(pov: f32, aspect: f32, near: f32, far: f32) -> [f32; 16] {
     let div_tanpov = 1.0 / f32::tan(std::f32::consts::PI * pov / 180.0);
     let div_depth = 1.0 / (far - near);
@@ -112,6 +113,7 @@ pub fn create_perse(pov: f32, aspect: f32, near: f32, far: f32) -> [f32; 16] {
     ]
 }
 
+/// A function to create a orthographic projection matrix.
 pub fn create_ortho(width: f32, height: f32, depth: f32) -> [f32; 16] {
     [
         1.0 / width,

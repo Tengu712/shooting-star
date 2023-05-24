@@ -52,10 +52,14 @@ impl VulkanApp {
     /// A constructor.
     /// The param `max_img_tex_cnt` is the max num of image textures and is the same as the num of descriptor sets in this app.
     /// The param `max_img_tex_cnt` must be greater than 0.
-    pub fn new(window_app: &WindowApp, max_img_tex_cnt: u32) -> Self {
+    pub(crate) fn new(window_app: &WindowApp, max_img_tex_cnt: u32) -> Self {
         if max_img_tex_cnt == 0 {
             ss_error("the max number of image texture must be greater than 0.");
         }
+
+        // ========================================================================================================= //
+        //     core                                                                                                  //
+        // ========================================================================================================= //
 
         let instance = {
             let ai = VkApplicationInfo {
@@ -156,6 +160,10 @@ impl VulkanApp {
             device
         };
 
+        // ========================================================================================================= //
+        //     command                                                                                               //
+        // ========================================================================================================= //
+
         let queue = {
             let mut queue = null_mut();
             unsafe { vkGetDeviceQueue(device, queue_family_index, 0, &mut queue) };
@@ -226,6 +234,10 @@ impl VulkanApp {
             );
             (wait_semaphore, signal_semaphore)
         };
+
+        // ========================================================================================================= //
+        //     renderer                                                                                              //
+        // ========================================================================================================= //
 
         #[cfg(target_os = "linux")]
         let surface = {
@@ -442,6 +454,10 @@ impl VulkanApp {
             }
             framebuffers
         };
+
+        // ========================================================================================================= //
+        //     pipeline                                                                                              //
+        // ========================================================================================================= //
 
         let (vert_shader, frag_shader) = {
             let create = |path| {
@@ -773,6 +789,10 @@ impl VulkanApp {
             pipeline
         };
 
+        // ========================================================================================================= //
+        //     resources                                                                                             //
+        // ========================================================================================================= //
+
         let uniform_buffer = {
             let data = UniformBuffer {
                 view: [
@@ -834,6 +854,10 @@ impl VulkanApp {
             &[0, 1, 2, 0, 2, 3],
         )
         .unwrap_or_else(|e| ss_error(&format!("failed to create a square : {e}")));
+
+        // ========================================================================================================= //
+        //     finish                                                                                                //
+        // ========================================================================================================= //
 
         Self {
             // core

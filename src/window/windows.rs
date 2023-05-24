@@ -15,15 +15,15 @@ const WINDOW_CLASS_NAME: LPCWSTR = [
 ]
 .as_ptr();
 
-pub struct WindowApp {
-    pub inst: HINSTANCE,
-    pub window: HWND,
+pub(crate) struct WindowApp {
+    pub(crate) inst: HINSTANCE,
+    pub(crate) window: HWND,
 }
 
 impl WindowApp {
     /// A constructor.
     /// It creates and shows a window.
-    pub fn new(title: &str, width: u32, height: u32) -> Self {
+    pub(crate) fn new(title: &str, width: u32, height: u32) -> Self {
         // get instance handle
         let inst = unsafe { GetModuleHandleW(null()) };
         if inst.is_null() {
@@ -91,7 +91,7 @@ impl WindowApp {
 
     /// A method to do all queued window events and check if the window is deleted.
     /// If the window is deleted it returns `false`, otherwise `true`.
-    pub fn do_events(&self) -> bool {
+    pub(crate) fn do_events(&self) -> bool {
         // prepare
         let mut msg = MSG {
             hwnd: null_mut(),
@@ -119,7 +119,7 @@ impl WindowApp {
         true
     }
 
-    pub fn terminate(self) {
+    pub(crate) fn terminate(self) {
         unsafe { DestroyWindow(self.window) };
         unsafe { UnregisterClassW(WINDOW_CLASS_NAME, self.inst) };
     }

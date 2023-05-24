@@ -1,7 +1,7 @@
 use super::*;
 
 impl VulkanApp {
-    pub fn terminate(self) {
+    pub(crate) fn terminate(self) {
         unsafe {
             vkDeviceWaitIdle(self.device);
 

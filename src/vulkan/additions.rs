@@ -6,7 +6,7 @@ use super::*;
 
 use std::os::raw::c_char;
 
-pub const PCHAR_VK_LAYER_KHRONOS_validation: *const c_char = [
+pub(super) const PCHAR_VK_LAYER_KHRONOS_validation: *const c_char = [
     'V' as c_char,
     'K' as c_char,
     '_' as c_char,
@@ -38,7 +38,7 @@ pub const PCHAR_VK_LAYER_KHRONOS_validation: *const c_char = [
 ]
 .as_ptr();
 
-pub const PCHAR_VK_EXT_debug_report: *const c_char = [
+pub(super) const PCHAR_VK_EXT_debug_report: *const c_char = [
     'V' as c_char,
     'K' as c_char,
     '_' as c_char,
@@ -62,7 +62,7 @@ pub const PCHAR_VK_EXT_debug_report: *const c_char = [
 ]
 .as_ptr();
 
-pub const PCHAR_VK_EXT_debug_utils: *const c_char = [
+pub(super) const PCHAR_VK_EXT_debug_utils: *const c_char = [
     'V' as c_char,
     'K' as c_char,
     '_' as c_char,
@@ -85,7 +85,7 @@ pub const PCHAR_VK_EXT_debug_utils: *const c_char = [
 ]
 .as_ptr();
 
-pub const PCHAR_VK_KHR_surface: *const c_char = [
+pub(super) const PCHAR_VK_KHR_surface: *const c_char = [
     'V' as c_char,
     'K' as c_char,
     '_' as c_char,
@@ -104,7 +104,7 @@ pub const PCHAR_VK_KHR_surface: *const c_char = [
 ]
 .as_ptr();
 
-pub const PCHAR_VK_KHR_xlib_surface: *const c_char = [
+pub(super) const PCHAR_VK_KHR_xlib_surface: *const c_char = [
     'V' as c_char,
     'K' as c_char,
     '_' as c_char,
@@ -128,7 +128,7 @@ pub const PCHAR_VK_KHR_xlib_surface: *const c_char = [
 ]
 .as_ptr();
 
-pub const PCHAR_VK_KHR_win32_surface: *const c_char = [
+pub(super) const PCHAR_VK_KHR_win32_surface: *const c_char = [
     'V' as c_char,
     'K' as c_char,
     '_' as c_char,
@@ -153,7 +153,7 @@ pub const PCHAR_VK_KHR_win32_surface: *const c_char = [
 ]
 .as_ptr();
 
-pub const PCHAR_VK_KHR_swapchain: *const c_char = [
+pub(super) const PCHAR_VK_KHR_swapchain: *const c_char = [
     'V' as c_char,
     'K' as c_char,
     '_' as c_char,
@@ -175,12 +175,12 @@ pub const PCHAR_VK_KHR_swapchain: *const c_char = [
 .as_ptr();
 
 #[inline(always)]
-pub fn VK_MAKE_VERSION(major: u32, minor: u32, patch: u32) -> u32 {
+pub(super) fn VK_MAKE_VERSION(major: u32, minor: u32, patch: u32) -> u32 {
     (major << 22) | (minor << 12) | patch
 }
 
 #[inline(always)]
-pub fn VK_MAKE_API_VERSION(variant: u32, major: u32, minor: u32, patch: u32) -> u32 {
+pub(super) fn VK_MAKE_API_VERSION(variant: u32, major: u32, minor: u32, patch: u32) -> u32 {
     (variant << 29) | (major << 22) | (minor << 12) | patch
 }
 
