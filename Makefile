@@ -1,4 +1,5 @@
 .PHONY: bindgen
+.PHONY: glslc
 
 vulkan_function=$\
 vkCreateInstance|$\
@@ -20,28 +21,55 @@ vkCreateFramebuffer|$\
 vkAllocateCommandBuffers|$\
 vkCreateFence|$\
 vkCreateSemaphore|$\
+vkCreateShaderModule|$\
+vkCreateSampler|$\
+vkCreateDescriptorSetLayout|$\
+vkCreateDescriptorPool|$\
+vkAllocateDescriptorSets|$\
+vkCreatePipelineLayout|$\
+vkCreateGraphicsPipelines|$\
+vkDeviceWaitIdle|$\
+vkDestroyInstance|$\
+vkDestroyDevice|$\
+vkDestroyCommandPool|$\
+vkDestroySurfaceKHR|$\
+vkDestroySwapchainKHR|$\
+vkDestroyImageView|$\
+vkDestroyRenderPass|$\
+vkDestroyFramebuffer|$\
+vkFreeCommandBuffers|$\
+vkDestroyFence|$\
+vkDestroySemaphore|$\
+vkDestroyShaderModule|$\
+vkDestroySampler|$\
+vkDestroyDescriptorSetLayout|$\
+vkDestroyDescriptorPool|$\
+vkDestroyPipelineLayout|$\
+vkDestroyPipeline|$\
+vkDestroyBuffer|$\
+vkFreeMemory|$\
 vkAcquireNextImageKHR|$\
 vkWaitForFences|$\
 vkResetFences|$\
 vkResetCommandBuffer|$\
 vkBeginCommandBuffer|$\
 vkCmdBeginRenderPass|$\
+vkCmdBindPipeline|$\
+vkCmdBindVertexBuffers|$\
+vkCmdBindIndexBuffer|$\
+vkCmdBindDescriptorSets|$\
+vkCmdPushConstants|$\
+vkCmdDrawIndexed|$\
 vkCmdEndRenderPass|$\
 vkEndCommandBuffer|$\
 vkQueueSubmit|$\
 vkQueuePresentKHR|$\
-vkDeviceWaitIdle|$\
-vkDestroySemaphore|$\
-vkDestroyFence|$\
-vkFreeCommandBuffers|$\
-vkDestroyFramebuffer|$\
-vkDestroyRenderPass|$\
-vkDestroyImageView|$\
-vkDestroySwapchainKHR|$\
-vkDestroySurfaceKHR|$\
-vkDestroyCommandPool|$\
-vkDestroyDevice|$\
-vkDestroyInstance
+vkCreateBuffer|$\
+vkGetBufferMemoryRequirements|$\
+vkAllocateMemory|$\
+vkBindBufferMemory|$\
+vkMapMemory|$\
+vkUnmapMemory
 
 vulkan_type=$\
 VkQueueFlagBits|$\
@@ -50,9 +78,14 @@ VkImageUsageFlagBits|$\
 VkImageAspectFlagBits|$\
 VkFenceCreateFlagBits|$\
 VkCommandBufferResetFlagBits|$\
-VkPipelineStageFlagBits
+VkPipelineStageFlagBits|$\
+VkCullModeFlagBits|$\
+VkColorComponentFlagBits|$\
+VkBufferUsageFlagBits|$\
+VkMemoryPropertyFlagBits
 
 vulkan_var=$\
+VK_FALSE|$\
 VK_TRUE
 
 linux_function=$\
@@ -106,11 +139,11 @@ WM_QUIT|$\
 WM_DESTROY
 
 ifeq ($(OS),Windows_NT)
-  allowlist_function='$(vulkan_function)|$(windows_function)'
+  allowlist_function='$(vulkan_function)|$(windows_function)|memcpy'
   allowlist_type='$(vulkan_type)|$(windows_type)'
   allowlist_var='$(vulkan_var)|$(windows_var)'
 else
-  allowlist_function='$(vulkan_function)|$(linux_function)'
+  allowlist_function='$(vulkan_function)|$(linux_function)|memcpy'
   allowlist_type='$(vulkan_type)|$(linux_type)'
   allowlist_var='$(vulkan_var)|$(linux_var)'
 endif
@@ -121,3 +154,7 @@ bindgen:
 	--allowlist-type $(allowlist_type) \
 	--allowlist-var $(allowlist_var) \
 	src/tpl.h -o src/tpl.rs
+
+glslc:
+	glslc src/shader.vert -o shader.vert.spv
+	glslc src/shader.frag -o shader.frag.spv

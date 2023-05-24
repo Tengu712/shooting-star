@@ -10,3 +10,4 @@
 #endif
 
 #include <vulkan/vulkan.h>
+#include <string.h>

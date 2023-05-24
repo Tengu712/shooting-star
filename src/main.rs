@@ -7,11 +7,15 @@ mod tpl;
 mod vulkan;
 mod window;
 
+use log::*;
+
 fn main() {
     let window_app = window::WindowApp::new("Sample Program\0", 640, 480);
-    let vulkan_app = vulkan::VulkanApp::new(&window_app);
+    let vulkan_app = vulkan::VulkanApp::new(&window_app, 2);
     while window_app.do_events() {
-        vulkan_app.render();
+        if let Err(e) = vulkan_app.render() {
+            ss_warning(&e);
+        }
     }
     vulkan_app.terminate();
     window_app.terminate();

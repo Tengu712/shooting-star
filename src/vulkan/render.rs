@@ -1,12 +1,16 @@
 use super::*;
 
+use std::mem::size_of;
+
 impl VulkanApp {
-    pub fn render(&self) {
-        // prepare
+    pub fn render(&self) -> Result<(), String> {
+        // ========================================================================================================= //
+        //     prepare                                                                                               //
+        // ========================================================================================================= //
 
         // get current image index
         let mut img_idx = 0;
-        check_warn!(
+        check_res!(
             vkAcquireNextImageKHR(
                 self.device,
                 self.swapchain,
@@ -21,7 +25,7 @@ impl VulkanApp {
 
         // reset frame data
         let fences = [self.fence];
-        check_warn!(
+        check_res!(
             vkWaitForFences(
                 self.device,
                 fences.len() as u32,
@@ -31,11 +35,11 @@ impl VulkanApp {
             ),
             "failed to wait for a fence."
         );
-        check_warn!(
+        check_res!(
             vkResetFences(self.device, fences.len() as u32, fences.as_ptr()),
             "failed to reset a fence."
         );
-        check_warn!(
+        check_res!(
             vkResetCommandBuffer(
                 self.command_buffer,
                 VkCommandBufferResetFlagBits_VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT
@@ -43,7 +47,9 @@ impl VulkanApp {
             "failed to reset a command buffer."
         );
 
-        // begin
+        // ========================================================================================================= //
+        //     begin                                                                                                 //
+        // ========================================================================================================= //
 
         // to record commands
         let cmd_bi = VkCommandBufferBeginInfo {
@@ -52,7 +58,7 @@ impl VulkanApp {
             flags: 0,
             pInheritanceInfo: null(),
         };
-        check_warn!(
+        check_res!(
             vkBeginCommandBuffer(self.command_buffer, &cmd_bi),
             "failed to begin to record commands."
         );
@@ -83,7 +89,63 @@ impl VulkanApp {
             )
         };
 
-        // end
+        // pipeline
+        unsafe {
+            vkCmdBindPipeline(
+                self.command_buffer,
+                VkPipelineBindPoint_VK_PIPELINE_BIND_POINT_GRAPHICS,
+                self.pipeline,
+            )
+        };
+
+        // ========================================================================================================= //
+        //     draw                                                                                                  //
+        // ========================================================================================================= //
+
+        // bind a square
+        let offset = 0;
+        unsafe {
+            vkCmdBindVertexBuffers(
+                self.command_buffer,
+                0,
+                1,
+                &self.square.vertex_buffer.buffer,
+                &offset,
+            )
+        };
+        unsafe {
+            vkCmdBindIndexBuffer(
+                self.command_buffer,
+                self.square.index_buffer.buffer,
+                offset,
+                VkIndexType_VK_INDEX_TYPE_UINT32,
+            )
+        };
+
+        // draw
+        let push_constant = PushConstant {
+            scl: [1.0, 1.0, 1.0, 1.0],
+            rot: [0.0, 0.0, 0.0, 0.0],
+            trs: [0.0, 0.0, 0.0, 0.0],
+            col: [1.0, 1.0, 1.0, 1.0],
+            uv: [0.0, 0.0, 0.0, 0.0],
+            param: 0,
+        };
+        unsafe {
+            vkCmdPushConstants(
+                self.command_buffer,
+                self.pipeline_layout,
+                VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                0,
+                size_of::<PushConstant>() as u32,
+                &push_constant as *const _ as *const c_void,
+            )
+        };
+        unsafe { vkCmdDrawIndexed(self.command_buffer, self.square.index_cnt, 1, 0, 0, 0) };
+
+        // ========================================================================================================= //
+        //     end                                                                                                   //
+        // ========================================================================================================= //
 
         // end to record commands
         unsafe { vkCmdEndRenderPass(self.command_buffer) };
@@ -105,7 +167,7 @@ impl VulkanApp {
             signalSemaphoreCount: signal_semaphores.len() as u32,
             pSignalSemaphores: signal_semaphores.as_ptr(),
         }];
-        check_warn!(
+        check_res!(
             vkQueueSubmit(self.queue, sis.len() as u32, sis.as_ptr(), self.fence,),
             "failed to submit a command buffer."
         );
@@ -123,12 +185,12 @@ impl VulkanApp {
             pImageIndices: [img_idx].as_ptr(),
             pResults: &mut res,
         };
-        check_warn!(
+        check_res!(
             vkQueuePresentKHR(self.queue, &pi),
             "failed to enqueue a present queue."
         );
-        if res != VkResult_VK_SUCCESS {
-            ss_warning("failed to present.");
-        }
+        check_res!(res, "failed to present.");
+
+        Ok(())
     }
 }

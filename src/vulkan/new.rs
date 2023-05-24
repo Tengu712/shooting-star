@@ -1,8 +1,10 @@
-use super::additions::*;
 use super::*;
 
 use crate::window::WindowApp;
 
+use std::fs::File;
+use std::io::Read;
+use std::mem::size_of;
 use std::os::raw::c_char;
 
 const APP_NAME: *const c_char = [
@@ -37,8 +39,24 @@ const INST_EXT_NAMES: [*const c_char; 2] = [PCHAR_VK_KHR_surface, INST_EXT_NAME_
 
 const DEVICE_EXT_NAMES: [*const c_char; 1] = [PCHAR_VK_KHR_swapchain];
 
+const SHADER_ENTRY_NAME: *const c_char = [
+    'm' as c_char,
+    'a' as c_char,
+    'i' as c_char,
+    'n' as c_char,
+    '\0' as c_char,
+]
+.as_ptr();
+
 impl VulkanApp {
-    pub fn new(window_app: &WindowApp) -> Self {
+    /// A constructor.
+    /// The param `max_img_tex_cnt` is the max num of image textures and is the same as the num of descriptor sets in this app.
+    /// The param `max_img_tex_cnt` must be greater than 0.
+    pub fn new(window_app: &WindowApp, max_img_tex_cnt: u32) -> Self {
+        if max_img_tex_cnt == 0 {
+            ss_error("the max number of image texture must be greater than 0.");
+        }
+
         let instance = {
             let ai = VkApplicationInfo {
                 sType: VkStructureType_VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -425,22 +443,430 @@ impl VulkanApp {
             framebuffers
         };
 
+        let (vert_shader, frag_shader) = {
+            let create = |path| {
+                let mut file = File::open(path)
+                    .unwrap_or_else(|_| ss_error(&format!("failed to open {path}.")));
+                let mut bins = Vec::new();
+                file.read_to_end(&mut bins)
+                    .unwrap_or_else(|_| ss_error(&format!("failed to read {path}.")));
+                let ci = VkShaderModuleCreateInfo {
+                    sType: VkStructureType_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                    pNext: null(),
+                    flags: 0,
+                    codeSize: bins.len(),
+                    pCode: bins.as_ptr() as *const u32,
+                };
+                let mut shader = null_mut();
+                check!(
+                    vkCreateShaderModule(device, &ci, null(), &mut shader),
+                    &format!("failed to create a shader from {path}.")
+                );
+                shader
+            };
+            (create("shader.vert.spv"), create("shader.frag.spv"))
+        };
+
+        let sampler = {
+            let ci = VkSamplerCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                magFilter: VkFilter_VK_FILTER_LINEAR,
+                minFilter: VkFilter_VK_FILTER_LINEAR,
+                mipmapMode: VkSamplerMipmapMode_VK_SAMPLER_MIPMAP_MODE_NEAREST,
+                addressModeU: VkSamplerAddressMode_VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                addressModeV: VkSamplerAddressMode_VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                addressModeW: VkSamplerAddressMode_VK_SAMPLER_ADDRESS_MODE_REPEAT,
+                mipLodBias: 0.0,
+                anisotropyEnable: 0,
+                maxAnisotropy: 1.0,
+                compareEnable: 0,
+                compareOp: VkCompareOp_VK_COMPARE_OP_NEVER,
+                minLod: 0.0,
+                maxLod: 0.0,
+                borderColor: VkBorderColor_VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+                unnormalizedCoordinates: 0,
+            };
+            let mut sampler = null_mut();
+            check!(
+                vkCreateSampler(device, &ci, null(), &mut sampler),
+                "failed to create a sampler."
+            );
+            sampler
+        };
+
+        let (descriptor_set_layout, descriptor_pool) = {
+            // layout
+            let binds = [
+                VkDescriptorSetLayoutBinding {
+                    binding: 0,
+                    descriptorType: VkDescriptorType_VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    descriptorCount: 1,
+                    stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                    pImmutableSamplers: null(),
+                },
+                VkDescriptorSetLayoutBinding {
+                    binding: 1,
+                    descriptorType: VkDescriptorType_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    descriptorCount: 1,
+                    stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_FRAGMENT_BIT,
+                    pImmutableSamplers: null(),
+                },
+            ];
+            let ci = VkDescriptorSetLayoutCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                bindingCount: binds.len() as u32,
+                pBindings: binds.as_ptr(),
+            };
+            let mut descriptor_set_layout = null_mut();
+            check!(
+                vkCreateDescriptorSetLayout(device, &ci, null(), &mut descriptor_set_layout),
+                "failed to create a descriptor set layout."
+            );
+
+            // pool
+            let sizes = binds
+                .iter()
+                .map(|n| VkDescriptorPoolSize {
+                    type_: n.descriptorType,
+                    descriptorCount: 1,
+                })
+                .collect::<Vec<VkDescriptorPoolSize>>();
+            let ci = VkDescriptorPoolCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                maxSets: max_img_tex_cnt,
+                poolSizeCount: sizes.len() as u32,
+                pPoolSizes: sizes.as_ptr(),
+            };
+            let mut descriptor_pool = null_mut();
+            check!(
+                vkCreateDescriptorPool(device, &ci, null(), &mut descriptor_pool),
+                "failed to create a descriptor pool."
+            );
+
+            // finish
+            (descriptor_set_layout, descriptor_pool)
+        };
+
+        let descriptor_set = {
+            let ai = VkDescriptorSetAllocateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                pNext: null(),
+                descriptorPool: descriptor_pool,
+                descriptorSetCount: max_img_tex_cnt,
+                pSetLayouts: &descriptor_set_layout,
+            };
+            let mut descriptor_set = null_mut();
+            check!(
+                vkAllocateDescriptorSets(device, &ai, &mut descriptor_set),
+                "failed to allocate descriptor sets."
+            );
+            descriptor_set
+        };
+
+        let pipeline_layout = {
+            let ranges = [VkPushConstantRange {
+                stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                offset: 0,
+                size: size_of::<PushConstant>() as u32,
+            }];
+            let ci = VkPipelineLayoutCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                // REVIEW: should i change:
+                // REVIEW:   [descriptor_set_layout]
+                // REVIEW:     setLayoutCount: descriptor_set_layouts.len() as u32,
+                // REVIEW:     pSetLayouts: descriptor_set_layouts.as_ptr(),
+                setLayoutCount: 1,
+                pSetLayouts: &descriptor_set_layout,
+                pushConstantRangeCount: ranges.len() as u32,
+                pPushConstantRanges: ranges.as_ptr(),
+            };
+            let mut pipeline_layout = null_mut();
+            check!(
+                vkCreatePipelineLayout(device, &ci, null(), &mut pipeline_layout),
+                "failed to create a pipeline layout."
+            );
+            pipeline_layout
+        };
+
+        let pipeline = {
+            // shader stage
+            let shaders = [
+                VkPipelineShaderStageCreateInfo {
+                    sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                    pNext: null(),
+                    flags: 0,
+                    stage: VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                    module: vert_shader,
+                    pName: SHADER_ENTRY_NAME,
+                    pSpecializationInfo: null(),
+                },
+                VkPipelineShaderStageCreateInfo {
+                    sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                    pNext: null(),
+                    flags: 0,
+                    stage: VkShaderStageFlagBits_VK_SHADER_STAGE_FRAGMENT_BIT,
+                    module: frag_shader,
+                    pName: SHADER_ENTRY_NAME,
+                    pSpecializationInfo: null(),
+                },
+            ];
+
+            // vertex input state
+            let input_bind_dcs = [VkVertexInputBindingDescription {
+                binding: 0,
+                stride: size_of::<Vertex>() as u32,
+                inputRate: VkVertexInputRate_VK_VERTEX_INPUT_RATE_VERTEX,
+            }];
+            let input_attr_dcs = [
+                VkVertexInputAttributeDescription {
+                    location: 0,
+                    binding: 0,
+                    format: VkFormat_VK_FORMAT_R32G32B32_SFLOAT,
+                    offset: 0,
+                },
+                VkVertexInputAttributeDescription {
+                    location: 1,
+                    binding: 0,
+                    format: VkFormat_VK_FORMAT_R32G32_SFLOAT,
+                    offset: size_of::<f32>() as u32 * 3,
+                },
+            ];
+            let input = VkPipelineVertexInputStateCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                vertexBindingDescriptionCount: input_bind_dcs.len() as u32,
+                pVertexBindingDescriptions: input_bind_dcs.as_ptr(),
+                vertexAttributeDescriptionCount: input_attr_dcs.len() as u32,
+                pVertexAttributeDescriptions: input_attr_dcs.as_ptr(),
+            };
+
+            // input assembly state
+            let inp_as = VkPipelineInputAssemblyStateCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                topology: VkPrimitiveTopology_VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+                primitiveRestartEnable: VK_FALSE,
+            };
+
+            // viewport state
+            let viewports = [VkViewport {
+                x: 0.0,
+                y: 0.0,
+                width: surface_capabilities.currentExtent.width as f32,
+                height: surface_capabilities.currentExtent.height as f32,
+                minDepth: 0.0,
+                maxDepth: 1.0,
+            }];
+            let scissors = [VkRect2D {
+                offset: VkOffset2D { x: 0, y: 0 },
+                extent: surface_capabilities.currentExtent,
+            }];
+            let viewport = VkPipelineViewportStateCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                viewportCount: viewports.len() as u32,
+                pViewports: viewports.as_ptr(),
+                scissorCount: scissors.len() as u32,
+                pScissors: scissors.as_ptr(),
+            };
+
+            // rasterization state
+            let raster = VkPipelineRasterizationStateCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                depthClampEnable: VK_FALSE,
+                rasterizerDiscardEnable: VK_FALSE,
+                polygonMode: VkPolygonMode_VK_POLYGON_MODE_FILL,
+                cullMode: VkCullModeFlagBits_VK_CULL_MODE_BACK_BIT,
+                frontFace: VkFrontFace_VK_FRONT_FACE_COUNTER_CLOCKWISE,
+                depthBiasEnable: VK_FALSE,
+                depthBiasConstantFactor: 0.0,
+                depthBiasClamp: 0.0,
+                depthBiasSlopeFactor: 0.0,
+                lineWidth: 1.0,
+            };
+
+            // multisample state
+            let multisample = VkPipelineMultisampleStateCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                rasterizationSamples: VkSampleCountFlagBits_VK_SAMPLE_COUNT_1_BIT,
+                sampleShadingEnable: VK_FALSE,
+                minSampleShading: 0.0,
+                pSampleMask: null(),
+                alphaToCoverageEnable: VK_FALSE,
+                alphaToOneEnable: VK_FALSE,
+            };
+
+            // color blend state
+            let color_blend_attachments = [VkPipelineColorBlendAttachmentState {
+                blendEnable: VK_TRUE,
+                srcColorBlendFactor: VkBlendFactor_VK_BLEND_FACTOR_SRC_ALPHA,
+                dstColorBlendFactor: VkBlendFactor_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                colorBlendOp: VkBlendOp_VK_BLEND_OP_ADD,
+                srcAlphaBlendFactor: VkBlendFactor_VK_BLEND_FACTOR_SRC_ALPHA,
+                dstAlphaBlendFactor: VkBlendFactor_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                alphaBlendOp: VkBlendOp_VK_BLEND_OP_ADD,
+                colorWriteMask: VkColorComponentFlagBits_VK_COLOR_COMPONENT_R_BIT
+                    | VkColorComponentFlagBits_VK_COLOR_COMPONENT_G_BIT
+                    | VkColorComponentFlagBits_VK_COLOR_COMPONENT_B_BIT
+                    | VkColorComponentFlagBits_VK_COLOR_COMPONENT_A_BIT,
+            }];
+            let color_blend = VkPipelineColorBlendStateCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                logicOpEnable: VK_FALSE,
+                logicOp: 0,
+                attachmentCount: color_blend_attachments.len() as u32,
+                pAttachments: color_blend_attachments.as_ptr(),
+                blendConstants: [0.0; 4],
+            };
+
+            // pipeline
+            let cis = [VkGraphicsPipelineCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                stageCount: shaders.len() as u32,
+                pStages: shaders.as_ptr(),
+                pVertexInputState: &input,
+                pInputAssemblyState: &inp_as,
+                pTessellationState: null(),
+                pViewportState: &viewport,
+                pRasterizationState: &raster,
+                pMultisampleState: &multisample,
+                pDepthStencilState: null(),
+                pColorBlendState: &color_blend,
+                pDynamicState: null(),
+                layout: pipeline_layout,
+                renderPass: render_pass,
+                subpass: 0,
+                basePipelineHandle: null_mut(),
+                basePipelineIndex: 0,
+            }];
+            let mut pipeline = null_mut();
+            check!(
+                vkCreateGraphicsPipelines(
+                    device,
+                    null_mut(),
+                    cis.len() as u32,
+                    cis.as_ptr(),
+                    null(),
+                    &mut pipeline
+                ),
+                "failed to create a pipeline."
+            );
+            pipeline
+        };
+
+        let uniform_buffer = {
+            let data = UniformBuffer {
+                view: [
+                    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                ],
+                perse: create_perse(
+                    45.0,
+                    surface_capabilities.currentExtent.width as f32
+                        / surface_capabilities.currentExtent.height as f32,
+                    100.0,
+                    1000.0,
+                ),
+                ortho: create_ortho(
+                    surface_capabilities.currentExtent.width as f32,
+                    surface_capabilities.currentExtent.height as f32,
+                    1000.0,
+                ),
+            };
+            let uniform_buffer = Buffer::new(
+                device,
+                phys_device_mem_props,
+                size_of::<UniformBuffer>() as VkDeviceSize,
+                VkBufferUsageFlagBits_VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                    | VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            )
+            .unwrap_or_else(|e| ss_error(&format!("failed to create a uniform buffer : {e}")));
+            map_memory(
+                device,
+                uniform_buffer.memory,
+                &data as *const _ as *const c_void,
+                size_of::<UniformBuffer>() as c_ulong,
+            )
+            .unwrap_or_else(|e| ss_error(&format!("failed to map a uniform buffer : {e}")));
+            uniform_buffer
+        };
+
+        let square = Model::new(
+            device,
+            phys_device_mem_props,
+            &[
+                Vertex {
+                    in_pos: [-0.5, 0.5, 0.0],
+                    in_uv: [0.0, 1.0],
+                },
+                Vertex {
+                    in_pos: [0.5, 0.5, 0.0],
+                    in_uv: [1.0, 1.0],
+                },
+                Vertex {
+                    in_pos: [0.5, -0.5, 0.0],
+                    in_uv: [1.0, 0.0],
+                },
+                Vertex {
+                    in_pos: [-0.5, -0.5, 0.0],
+                    in_uv: [0.0, 0.0],
+                },
+            ],
+            &[0, 1, 2, 0, 2, 3],
+        )
+        .unwrap_or_else(|e| ss_error(&format!("failed to create a square : {e}")));
+
         Self {
+            // core
             instance,
             phys_device_mem_props,
             device,
+            // command
             queue,
             command_pool,
             command_buffer,
             fence,
             wait_semaphore,
             signal_semaphore,
+            // renderer
             surface,
             surface_capabilities,
             swapchain,
             image_views,
             render_pass,
             framebuffers,
+            // pipeline
+            vert_shader,
+            frag_shader,
+            sampler,
+            pipeline_layout,
+            pipeline,
+            // descriptor set
+            descriptor_set_layout,
+            descriptor_pool,
+            descriptor_set,
+            // resources
+            uniform_buffer,
+            square,
         }
     }
 }

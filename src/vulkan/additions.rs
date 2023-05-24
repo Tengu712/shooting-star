@@ -255,3 +255,13 @@ impl Default for VkOffset2D {
         Self { x: 0, y: 0 }
     }
 }
+
+impl Default for VkMemoryRequirements {
+    fn default() -> Self {
+        Self {
+            size: 0,
+            alignment: 0,
+            memoryTypeBits: 0,
+        }
+    }
+}
