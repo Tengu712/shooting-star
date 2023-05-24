@@ -1,6 +1,7 @@
 use super::*;
 
 use std::mem::size_of;
+use std::os::raw::c_void;
 
 impl VulkanApp {
     pub(crate) fn render(&self) -> Result<(), String> {
@@ -122,11 +123,29 @@ impl VulkanApp {
             )
         };
 
+        // bind descriptor set
+        if let Some(n) = self.img_texs_map.get(&0) {
+            unsafe {
+                vkCmdBindDescriptorSets(
+                    self.command_buffer,
+                    VkPipelineBindPoint_VK_PIPELINE_BIND_POINT_GRAPHICS,
+                    self.pipeline_layout,
+                    0,
+                    1,
+                    &self.descriptor_sets[*n],
+                    0,
+                    null(),
+                )
+            };
+        } else {
+            ss_warning("tried to use an invalid image texture.")
+        }
+
         // draw
         let push_constant = PushConstant {
-            scl: [1.0, 1.0, 1.0, 1.0],
+            scl: [100.0, 100.0, 1.0, 1.0],
             rot: [0.0, 0.0, 0.0, 0.0],
-            trs: [0.0, 0.0, 0.0, 0.0],
+            trs: [0.0, 0.0, 320.0, 0.0],
             col: [1.0, 1.0, 1.0, 1.0],
             uv: [0.0, 0.0, 0.0, 0.0],
             param: 0,

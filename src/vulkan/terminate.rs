@@ -6,6 +6,11 @@ impl VulkanApp {
             vkDeviceWaitIdle(self.device);
 
             // resources
+            for img_tex in self.img_texs {
+                if let Some(n) = img_tex {
+                    n.terminate(self.device);
+                }
+            }
             self.square.terminate(self.device);
             self.uniform_buffer.terminate(self.device);
 

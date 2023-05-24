@@ -1,17 +1,24 @@
 use super::*;
 
 use std::mem::size_of;
+use std::os::raw::{c_ulong, c_void};
 
-pub(super) struct Model {
-    pub(super) index_cnt: u32,
-    pub(super) vertex_buffer: Buffer,
-    pub(super) index_buffer: Buffer,
+#[repr(C)]
+pub(in crate::vulkan) struct Vertex {
+    pub(in crate::vulkan) in_pos: [f32; 3],
+    pub(in crate::vulkan) in_uv: [f32; 2],
+}
+
+pub(in crate::vulkan) struct Model {
+    pub(in crate::vulkan) index_cnt: u32,
+    pub(in crate::vulkan) vertex_buffer: Buffer,
+    pub(in crate::vulkan) index_buffer: Buffer,
 }
 
 impl Model {
-    pub(super) fn new(
+    pub(in crate::vulkan) fn new(
         device: VkDevice,
-        phys_device_mem_prop: VkPhysicalDeviceMemoryProperties,
+        phys_device_mem_prop: &VkPhysicalDeviceMemoryProperties,
         vtxs: &[Vertex],
         idxs: &[u32],
     ) -> Result<Self, String> {
@@ -56,7 +63,7 @@ impl Model {
         })
     }
 
-    pub(super) fn terminate(self, device: VkDevice) {
+    pub(in crate::vulkan) fn terminate(self, device: VkDevice) {
         self.index_buffer.terminate(device);
         self.vertex_buffer.terminate(device);
     }

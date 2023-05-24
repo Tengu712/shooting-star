@@ -1,3 +1,4 @@
+.PHONY: all
 .PHONY: bindgen
 .PHONY: glslc
 
@@ -48,6 +49,7 @@ vkDestroyPipelineLayout|$\
 vkDestroyPipeline|$\
 vkDestroyBuffer|$\
 vkFreeMemory|$\
+vkDestroyImage|$\
 vkAcquireNextImageKHR|$\
 vkWaitForFences|$\
 vkResetFences|$\
@@ -69,7 +71,15 @@ vkGetBufferMemoryRequirements|$\
 vkAllocateMemory|$\
 vkBindBufferMemory|$\
 vkMapMemory|$\
-vkUnmapMemory
+vkUnmapMemory|$\
+vkCreateImage|$\
+vkGetImageMemoryRequirements|$\
+vkAllocateMemory|$\
+vkBindImageMemory|$\
+vkCmdPipelineBarrier|$\
+vkCmdCopyBufferToImage|$\
+vkCmdPipelineBarrier|$\
+vkUpdateDescriptorSets
 
 vulkan_type=$\
 VkQueueFlagBits|$\
@@ -82,11 +92,14 @@ VkPipelineStageFlagBits|$\
 VkCullModeFlagBits|$\
 VkColorComponentFlagBits|$\
 VkBufferUsageFlagBits|$\
-VkMemoryPropertyFlagBits
+VkMemoryPropertyFlagBits|$\
+VkAccessFlagBits
 
 vulkan_var=$\
 VK_FALSE|$\
-VK_TRUE
+VK_TRUE|$\
+VK_QUEUE_FAMILY_IGNORED|$\
+VK_WHOLE_SIZE
 
 linux_function=$\
 XOpenDisplay|$\
@@ -147,6 +160,8 @@ else
   allowlist_type='$(vulkan_type)|$(linux_type)'
   allowlist_var='$(vulkan_var)|$(linux_var)'
 endif
+
+all: bindgen glslc
 
 bindgen:
 	bindgen \

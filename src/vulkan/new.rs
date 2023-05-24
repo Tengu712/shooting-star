@@ -5,7 +5,7 @@ use crate::window::WindowApp;
 use std::fs::File;
 use std::io::Read;
 use std::mem::size_of;
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_ulong, c_void};
 
 const APP_NAME: *const c_char = [
     'V' as c_char,
@@ -47,6 +47,34 @@ const SHADER_ENTRY_NAME: *const c_char = [
     '\0' as c_char,
 ]
 .as_ptr();
+
+const SQUARE_VTXS: [Vertex; 4] = [
+    Vertex {
+        in_pos: [-0.5, 0.5, 0.0],
+        in_uv: [0.0, 1.0],
+    },
+    Vertex {
+        in_pos: [0.5, 0.5, 0.0],
+        in_uv: [1.0, 1.0],
+    },
+    Vertex {
+        in_pos: [0.5, -0.5, 0.0],
+        in_uv: [1.0, 0.0],
+    },
+    Vertex {
+        in_pos: [-0.5, -0.5, 0.0],
+        in_uv: [0.0, 0.0],
+    },
+];
+const SQUARE_IDXS: [u32; 6] = [0, 1, 2, 0, 2, 3];
+
+const DEF_IMG_TEX_WIDTH: u32 = 2;
+const DEF_IMG_TEX_HEIGHT: u32 = 2;
+const DEF_IMG_TEX_PIXELS: [u8; 16] = [
+    255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255,
+];
+const DEF_IMG_TEX_PIXELS_SIZE: VkDeviceSize =
+    (size_of::<f32>() * DEF_IMG_TEX_PIXELS.len()) as VkDeviceSize;
 
 impl VulkanApp {
     /// A constructor.
@@ -569,20 +597,24 @@ impl VulkanApp {
             (descriptor_set_layout, descriptor_pool)
         };
 
-        let descriptor_set = {
+        let descriptor_sets = {
             let ai = VkDescriptorSetAllocateInfo {
                 sType: VkStructureType_VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
                 pNext: null(),
                 descriptorPool: descriptor_pool,
-                descriptorSetCount: max_img_tex_cnt,
+                descriptorSetCount: 1,
                 pSetLayouts: &descriptor_set_layout,
             };
-            let mut descriptor_set = null_mut();
-            check!(
-                vkAllocateDescriptorSets(device, &ai, &mut descriptor_set),
-                "failed to allocate descriptor sets."
-            );
-            descriptor_set
+            let mut descriptor_sets = Vec::with_capacity(max_img_tex_cnt as usize);
+            for _ in 0..max_img_tex_cnt {
+                let mut descriptor_set = null_mut();
+                check!(
+                    vkAllocateDescriptorSets(device, &ai, &mut descriptor_set),
+                    "failed to allocate descriptor sets."
+                );
+                descriptor_sets.push(descriptor_set);
+            }
+            descriptor_sets
         };
 
         let pipeline_layout = {
@@ -813,7 +845,7 @@ impl VulkanApp {
             };
             let uniform_buffer = Buffer::new(
                 device,
-                phys_device_mem_props,
+                &phys_device_mem_props,
                 size_of::<UniformBuffer>() as VkDeviceSize,
                 VkBufferUsageFlagBits_VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
@@ -830,30 +862,52 @@ impl VulkanApp {
             uniform_buffer
         };
 
-        let square = Model::new(
+        let square = Model::new(device, &phys_device_mem_props, &SQUARE_VTXS, &SQUARE_IDXS)
+            .unwrap_or_else(|e| ss_error(&format!("failed to create a square : {e}")));
+
+        let def_img_tex = {
+            let texture = Texture::new(
+                device,
+                &phys_device_mem_props,
+                VkFormat_VK_FORMAT_R8G8B8A8_UNORM,
+                DEF_IMG_TEX_WIDTH,
+                DEF_IMG_TEX_HEIGHT,
+                VkImageUsageFlagBits_VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                    | VkImageUsageFlagBits_VK_IMAGE_USAGE_SAMPLED_BIT,
+                VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+            )
+            .unwrap_or_else(|e| {
+                ss_error(&format!("failed to create a default image texture : {e}"))
+            });
+            copy_memory(
+                device,
+                &phys_device_mem_props,
+                queue,
+                command_pool,
+                DEF_IMG_TEX_WIDTH,
+                DEF_IMG_TEX_HEIGHT,
+                texture.image,
+                DEF_IMG_TEX_PIXELS_SIZE,
+                DEF_IMG_TEX_PIXELS.as_ptr() as *const c_void,
+            )
+            .unwrap_or_else(|e| {
+                ss_error(&format!(
+                    "failed to copy a default image texture data : {e}"
+                ))
+            });
+            texture
+        };
+
+        let img_texs = Vec::from([Some(def_img_tex)]);
+        let img_texs_map = HashMap::from([(0, 0)]);
+
+        Self::load(
             device,
-            phys_device_mem_props,
-            &[
-                Vertex {
-                    in_pos: [-0.5, 0.5, 0.0],
-                    in_uv: [0.0, 1.0],
-                },
-                Vertex {
-                    in_pos: [0.5, 0.5, 0.0],
-                    in_uv: [1.0, 1.0],
-                },
-                Vertex {
-                    in_pos: [0.5, -0.5, 0.0],
-                    in_uv: [1.0, 0.0],
-                },
-                Vertex {
-                    in_pos: [-0.5, -0.5, 0.0],
-                    in_uv: [0.0, 0.0],
-                },
-            ],
-            &[0, 1, 2, 0, 2, 3],
-        )
-        .unwrap_or_else(|e| ss_error(&format!("failed to create a square : {e}")));
+            descriptor_sets[0],
+            uniform_buffer.buffer,
+            sampler,
+            def_img_tex.image_view,
+        );
 
         // ========================================================================================================= //
         //     finish                                                                                                //
@@ -887,10 +941,13 @@ impl VulkanApp {
             // descriptor set
             descriptor_set_layout,
             descriptor_pool,
-            descriptor_set,
+            descriptor_sets,
             // resources
             uniform_buffer,
             square,
+            max_img_tex_cnt,
+            img_texs,
+            img_texs_map,
         }
     }
 }

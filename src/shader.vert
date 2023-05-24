@@ -65,8 +65,8 @@ void main() {
         1.0
     );
 
-    // pos = view * pos;
-    // pos = proj * pos;
+    pos = view * pos;
+    pos = perse * pos;
 
     gl_Position = pos;
     out_uv = in_uv;

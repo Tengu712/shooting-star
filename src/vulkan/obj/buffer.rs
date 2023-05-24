@@ -1,14 +1,14 @@
 use super::*;
 
-pub(super) struct Buffer {
-    pub(super) buffer: VkBuffer,
-    pub(super) memory: VkDeviceMemory,
+pub(in crate::vulkan) struct Buffer {
+    pub(in crate::vulkan) buffer: VkBuffer,
+    pub(in crate::vulkan) memory: VkDeviceMemory,
 }
 
 impl Buffer {
-    pub(super) fn new(
+    pub(in crate::vulkan) fn new(
         device: VkDevice,
-        phys_device_mem_prop: VkPhysicalDeviceMemoryProperties,
+        phys_device_mem_prop: &VkPhysicalDeviceMemoryProperties,
         size: VkDeviceSize,
         usage: VkBufferUsageFlags,
         flags: VkMemoryPropertyFlags,
@@ -33,15 +33,10 @@ impl Buffer {
             buffer
         };
 
-        // get memory requirements
-        let reqs = {
-            let mut reqs = VkMemoryRequirements::default();
-            unsafe { vkGetBufferMemoryRequirements(device, buffer, &mut reqs) };
-            reqs
-        };
-
         // allocate memory
         let memory = {
+            let mut reqs = VkMemoryRequirements::default();
+            unsafe { vkGetBufferMemoryRequirements(device, buffer, &mut reqs) };
             let index = get_memory_type_index(phys_device_mem_prop, &reqs, flags)
                 .ok_or(String::from("failed to get a memory type index."))?;
             let ai = VkMemoryAllocateInfo {
@@ -68,7 +63,7 @@ impl Buffer {
         Ok(Self { buffer, memory })
     }
 
-    pub(super) fn terminate(self, device: VkDevice) {
+    pub(in crate::vulkan) fn terminate(self, device: VkDevice) {
         unsafe {
             vkFreeMemory(device, self.memory, null());
             vkDestroyBuffer(device, self.buffer, null());
