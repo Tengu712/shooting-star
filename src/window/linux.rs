@@ -41,7 +41,7 @@ const WM_DELETE_WINDOW: *const c_char = [
 ]
 .as_ptr();
 
-pub(crate) struct WindowApp {
+pub struct WindowApp {
     pub(crate) display: *mut Display,
     pub(crate) window: Window,
     atom_protocols: Atom,
@@ -51,7 +51,7 @@ pub(crate) struct WindowApp {
 impl WindowApp {
     /// A constructor.
     /// It creates and shows a window.
-    pub(crate) fn new(title: &str, width: u32, height: u32) -> Self {
+    pub fn new(title: &str, width: u32, height: u32) -> Self {
         // create a window
         let display = unsafe { XOpenDisplay(null()) };
         if display.is_null() {
@@ -118,7 +118,7 @@ impl WindowApp {
 
     /// A method to do all queued window events and check if the window is deleted.
     /// If the window is deleted it returns `false`, otherwise `true`.
-    pub(crate) fn do_events(&self) -> bool {
+    pub fn do_events(&self) -> bool {
         // do all window events
         while unsafe { XPending(self.display) } != 0 {
             // get a window event
@@ -141,5 +141,5 @@ impl WindowApp {
         true
     }
 
-    pub(crate) fn terminate(self) {}
+    pub fn terminate(self) {}
 }

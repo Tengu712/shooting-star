@@ -23,10 +23,11 @@ macro_rules! check_res {
 
 mod additions;
 mod common;
+pub mod image;
 mod load;
 pub mod math;
 mod new;
-pub(crate) mod obj;
+mod obj;
 mod render;
 mod terminate;
 
@@ -34,7 +35,7 @@ use additions::*;
 use common::*;
 use obj::{buffer::*, model::*, texture::*};
 
-pub(crate) struct VulkanApp {
+pub struct VulkanApp {
     // core
     instance: VkInstance,
     phys_device_mem_props: VkPhysicalDeviceMemoryProperties,
@@ -66,14 +67,15 @@ pub(crate) struct VulkanApp {
     // resources
     uniform_buffer: Buffer,
     square: Model,
-    img_texs: Vec<Option<Texture>>,
     /// A hashmap:
     ///   - whose key is an image texture id
-    ///   - whose value is VulkanApp::img_texs index and the descriptor sets index
-    img_texs_map: HashMap<usize, usize>,
+    ///   - whose value is (descriptor sets index, image texture)
+    img_texs: HashMap<usize, (usize, Texture)>,
+    unused_img_tex_idxs: Vec<usize>,
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct PushConstant {
     pub scl: [f32; 4],
     pub rot: [f32; 4],
@@ -82,12 +84,29 @@ pub struct PushConstant {
     pub uv: [f32; 4],
     pub param: i32,
 }
+impl Default for PushConstant {
+    fn default() -> Self {
+        Self {
+            scl: [1.0, 1.0, 1.0, 0.0],
+            rot: [0.0; 4],
+            trs: [0.0; 4],
+            col: [1.0; 4],
+            uv: [0.0, 0.0, 1.0, 1.0],
+            param: 0,
+        }
+    }
+}
 
 #[repr(C)]
 pub struct UniformBuffer {
     pub view: [f32; 16],
     pub perse: [f32; 16],
     pub ortho: [f32; 16],
+}
+
+pub enum RenderTask {
+    Draw(PushConstant),
+    SetImageTexture(usize),
 }
 
 pub const DEFAULT_IMAGE_TEXTURE_ID: usize = 0;

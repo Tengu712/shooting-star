@@ -75,13 +75,13 @@ const DEF_IMG_TEX_PIXELS: [u8; 16] = [
     255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255,
 ];
 const DEF_IMG_TEX_PIXELS_SIZE: VkDeviceSize =
-    (size_of::<f32>() * DEF_IMG_TEX_PIXELS.len()) as VkDeviceSize;
+    (size_of::<u8>() * DEF_IMG_TEX_PIXELS.len()) as VkDeviceSize;
 
 impl VulkanApp {
     /// A constructor.
     /// The param `max_img_tex_cnt` is the max num of image textures and is the same as the num of descriptor sets in this app.
     /// The param `max_img_tex_cnt` must be greater than 0.
-    pub(crate) fn new(window_app: &WindowApp, max_img_tex_cnt: u32) -> Self {
+    pub fn new(window_app: &WindowApp, max_img_tex_cnt: u32) -> Self {
         if max_img_tex_cnt == 0 {
             ss_error("the max number of image texture must be greater than 0.");
         }
@@ -829,9 +829,14 @@ impl VulkanApp {
 
         let uniform_buffer = {
             let data = UniformBuffer {
-                view: [
-                    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-                ],
+                view: create_view(
+                    [
+                        0.0,
+                        0.0,
+                        surface_capabilities.currentExtent.width as f32 / -2.0,
+                    ],
+                    [0.0; 3],
+                ),
                 perse: create_perse(
                     45.0,
                     surface_capabilities.currentExtent.width as f32
@@ -900,7 +905,7 @@ impl VulkanApp {
             texture
         };
 
-        Self::load_to_descriptor_set(
+        update_descriptor_set(
             device,
             descriptor_sets[0],
             uniform_buffer.buffer,
@@ -908,8 +913,8 @@ impl VulkanApp {
             def_img_tex.image_view,
         );
 
-        let img_texs = Vec::from([Some(def_img_tex)]);
-        let img_texs_map = HashMap::from([(DEFAULT_IMAGE_TEXTURE_ID, 0)]);
+        let img_texs = HashMap::from([(DEFAULT_IMAGE_TEXTURE_ID, (0, def_img_tex))]);
+        let unused_img_tex_idxs = Vec::new();
 
         // ========================================================================================================= //
         //     finish                                                                                                //
@@ -948,7 +953,7 @@ impl VulkanApp {
             uniform_buffer,
             square,
             img_texs,
-            img_texs_map,
+            unused_img_tex_idxs,
         }
     }
 }

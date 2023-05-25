@@ -31,31 +31,33 @@ void main() {
         1.0
     );
 
-    float s = sin(constant.rot.x);
-    float c = cos(constant.rot.x);
+    float sr = sin(constant.rot.x);
+    float sp = sin(constant.rot.y);
+    float sy = sin(constant.rot.z);
+    float cr = cos(constant.rot.x);
+    float cp = cos(constant.rot.y);
+    float cy = cos(constant.rot.z);
     pos = mat4(
-        1.0, 0.0, 0.0, 0.0,
-        0.0,   c,  -s, 0.0,
-        0.0,   s,   c, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    ) * pos;
-
-    s = sin(constant.rot.y);
-    c = cos(constant.rot.y);
-    pos = mat4(
-          c, 0.0,   s, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-         -s, 0.0,   c, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    ) * pos;
-
-    s = sin(constant.rot.y);
-    c = cos(constant.rot.y);
-    pos = mat4(
-          c,  -s, 0.0, 0.0,
-          s,   c, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0
+        // col 1
+        cp * cy,
+        -cp * sy,
+        sp,
+        0.0,
+        // col 2
+        cr * sy + sr * sp * cy,
+        cr * cy - sr * sp * sy,
+        -sr * cp,
+        0.0,
+        // col 3
+        sr * sy - cr * sp * cy,
+        sr * cy + cr * sp * sy,
+        cr * cp,
+        0.0,
+        // col 4
+        0.0,
+        0.0,
+        0.0,
+        1.0
     ) * pos;
 
     pos = vec4(

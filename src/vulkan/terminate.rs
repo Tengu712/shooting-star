@@ -1,15 +1,15 @@
 use super::*;
 
 impl VulkanApp {
-    pub(crate) fn terminate(self) {
+    /// A destructor method.
+    /// Shooting Star user must call this method when terminating the process.
+    pub fn terminate(self) {
         unsafe {
             vkDeviceWaitIdle(self.device);
 
             // resources
-            for img_tex in self.img_texs {
-                if let Some(n) = img_tex {
-                    n.terminate(self.device);
-                }
+            for (_, (_, n)) in self.img_texs {
+                n.terminate(self.device);
             }
             self.square.terminate(self.device);
             self.uniform_buffer.terminate(self.device);

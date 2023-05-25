@@ -1,6 +1,7 @@
-/target
 /.vscode
 
 /src/tpl.rs
+
+target
 
 *.spv

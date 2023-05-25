@@ -1,13 +1,31 @@
 use super::*;
 
 use std::mem::size_of;
-use std::os::raw::c_void;
+use std::os::raw::{c_ulong, c_void};
 
 impl VulkanApp {
-    pub(crate) fn render(&self) -> Result<(), String> {
+    /// A method for rendering.
+    /// 
+    /// - `uniform_buffer` - update a uniform buffer if it isn't None
+    /// - `tasks` - processed just in order
+    pub fn render(
+        &self,
+        uniform_buffer: Option<&UniformBuffer>,
+        tasks: &[RenderTask],
+    ) -> Result<(), String> {
         // ========================================================================================================= //
         //     prepare                                                                                               //
         // ========================================================================================================= //
+
+        // update uniform buffer
+        if let Some(n) = uniform_buffer {
+            map_memory(
+                self.device,
+                self.uniform_buffer.memory,
+                n as *const _ as *const c_void,
+                size_of::<UniformBuffer>() as c_ulong,
+            )?;
+        }
 
         // get current image index
         let mut img_idx = 0;
@@ -67,7 +85,7 @@ impl VulkanApp {
         // render pass
         let clear_values = [VkClearValue {
             color: VkClearColorValue {
-                float32: [0.25, 0.25, 0.25, 1.0],
+                float32: [0.15, 0.15, 0.15, 1.0],
             },
         }];
         let rp_bi = VkRenderPassBeginInfo {
@@ -123,44 +141,58 @@ impl VulkanApp {
             )
         };
 
-        // bind descriptor set
-        if let Some(n) = self.img_texs_map.get(&0) {
-            unsafe {
-                vkCmdBindDescriptorSets(
-                    self.command_buffer,
-                    VkPipelineBindPoint_VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    self.pipeline_layout,
-                    0,
-                    1,
-                    &self.descriptor_sets[*n],
-                    0,
-                    null(),
-                )
-            };
-        } else {
-            ss_warning("tried to use an invalid image texture.")
-        }
-
-        // draw
-        let push_constant = PushConstant {
-            scl: [100.0, 100.0, 1.0, 1.0],
-            rot: [0.0, 0.0, 0.0, 0.0],
-            trs: [0.0, 0.0, 320.0, 0.0],
-            col: [1.0, 1.0, 1.0, 1.0],
-            uv: [0.0, 0.0, 0.0, 0.0],
-            param: 0,
-        };
+        // bind default descriptor set
         unsafe {
-            vkCmdPushConstants(
+            vkCmdBindDescriptorSets(
                 self.command_buffer,
+                VkPipelineBindPoint_VK_PIPELINE_BIND_POINT_GRAPHICS,
                 self.pipeline_layout,
-                VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
                 0,
-                size_of::<PushConstant>() as u32,
-                &push_constant as *const _ as *const c_void,
+                1,
+                &self.descriptor_sets[0],
+                0,
+                null(),
             )
         };
-        unsafe { vkCmdDrawIndexed(self.command_buffer, self.square.index_cnt, 1, 0, 0, 0) };
+
+        // do tasks
+        for task in tasks {
+            match task {
+                // draw a square
+                RenderTask::Draw(n) => {
+                    unsafe {
+                        vkCmdPushConstants(
+                            self.command_buffer,
+                            self.pipeline_layout,
+                            VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                            0,
+                            size_of::<PushConstant>() as u32,
+                            n as *const _ as *const c_void,
+                        );
+                        vkCmdDrawIndexed(self.command_buffer, self.square.index_cnt, 1, 0, 0, 0);
+                    };
+                }
+                // bind descriptor sets
+                RenderTask::SetImageTexture(n) => {
+                    if let Some((i, _)) = self.img_texs.get(n) {
+                        unsafe {
+                            vkCmdBindDescriptorSets(
+                                self.command_buffer,
+                                VkPipelineBindPoint_VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                self.pipeline_layout,
+                                0,
+                                1,
+                                &self.descriptor_sets[*i],
+                                0,
+                                null(),
+                            )
+                        };
+                    } else {
+                        ss_warning("tried to use an invalid image texture.")
+                    }
+                }
+            }
+        }
 
         // ========================================================================================================= //
         //     end                                                                                                   //

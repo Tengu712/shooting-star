@@ -81,7 +81,7 @@ pub(super) fn copy_memory(
         "failed to begin a command buffer for copying command."
     );
 
-    //
+    // TODO: comment
     let barriers = [VkImageMemoryBarrier {
         sType: VkStructureType_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         pNext: null(),
@@ -115,7 +115,7 @@ pub(super) fn copy_memory(
         )
     };
 
-    //
+    // TODO: comment
     let copy_regions = [VkBufferImageCopy {
         bufferOffset: 0,
         bufferRowLength: 0,
@@ -144,7 +144,7 @@ pub(super) fn copy_memory(
         )
     };
 
-    //
+    // TODO: comment
     let barriers = [VkImageMemoryBarrier {
         sType: VkStructureType_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         pNext: null(),
@@ -213,4 +213,50 @@ pub(super) fn copy_memory(
     };
     staging.terminate(device);
     Ok(())
+}
+
+pub(super) fn update_descriptor_set(
+    device: VkDevice,
+    descriptor_set: VkDescriptorSet,
+    buffer: VkBuffer,
+    sampler: VkSampler,
+    image_view: VkImageView,
+) {
+    let bi = VkDescriptorBufferInfo {
+        buffer,
+        offset: 0,
+        range: VK_WHOLE_SIZE as u64,
+    };
+    let ii = VkDescriptorImageInfo {
+        sampler,
+        imageView: image_view,
+        imageLayout: VkImageLayout_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    };
+    let sets = [
+        VkWriteDescriptorSet {
+            sType: VkStructureType_VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            pNext: null(),
+            dstSet: descriptor_set,
+            dstBinding: 0,
+            dstArrayElement: 0,
+            descriptorCount: 1,
+            descriptorType: VkDescriptorType_VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            pImageInfo: null(),
+            pBufferInfo: &bi,
+            pTexelBufferView: null(),
+        },
+        VkWriteDescriptorSet {
+            sType: VkStructureType_VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            pNext: null(),
+            dstSet: descriptor_set,
+            dstBinding: 1,
+            dstArrayElement: 0,
+            descriptorCount: 1,
+            descriptorType: VkDescriptorType_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            pImageInfo: &ii,
+            pBufferInfo: null(),
+            pTexelBufferView: null(),
+        },
+    ];
+    unsafe { vkUpdateDescriptorSets(device, sets.len() as u32, sets.as_ptr(), 0, null()) }
 }
