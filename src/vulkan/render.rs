@@ -15,7 +15,7 @@ impl VulkanApp {
             vkAcquireNextImageKHR(
                 self.device,
                 self.swapchain,
-                u64::MAX,
+                VK_WHOLE_SIZE as u64,
                 self.wait_semaphore,
                 null_mut(),
                 &mut img_idx
@@ -32,7 +32,7 @@ impl VulkanApp {
                 fences.len() as u32,
                 fences.as_ptr(),
                 VK_TRUE,
-                u64::MAX
+                VK_WHOLE_SIZE as u64,
             ),
             "failed to wait for a fence."
         );

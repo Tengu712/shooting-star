@@ -1,3 +1,4 @@
+use super::math::*;
 use super::*;
 
 use crate::window::WindowApp;
@@ -576,7 +577,7 @@ impl VulkanApp {
                 .iter()
                 .map(|n| VkDescriptorPoolSize {
                     type_: n.descriptorType,
-                    descriptorCount: 1,
+                    descriptorCount: max_img_tex_cnt,
                 })
                 .collect::<Vec<VkDescriptorPoolSize>>();
             let ci = VkDescriptorPoolCreateInfo {
@@ -603,6 +604,7 @@ impl VulkanApp {
                 pNext: null(),
                 descriptorPool: descriptor_pool,
                 descriptorSetCount: 1,
+                // REVIEW: should i make [descriptor_set_layout]
                 pSetLayouts: &descriptor_set_layout,
             };
             let mut descriptor_sets = Vec::with_capacity(max_img_tex_cnt as usize);
@@ -898,9 +900,6 @@ impl VulkanApp {
             texture
         };
 
-        let img_texs = Vec::from([Some(def_img_tex)]);
-        let img_texs_map = HashMap::from([(0, 0)]);
-
         Self::load(
             device,
             descriptor_sets[0],
@@ -908,6 +907,9 @@ impl VulkanApp {
             sampler,
             def_img_tex.image_view,
         );
+
+        let img_texs = Vec::from([Some(def_img_tex)]);
+        let img_texs_map = HashMap::from([(0, 0)]);
 
         // ========================================================================================================= //
         //     finish                                                                                                //

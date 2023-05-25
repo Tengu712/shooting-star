@@ -1,6 +1,5 @@
 use super::*;
 
-#[derive(Clone, Copy)]
 pub(in crate::vulkan) struct Texture {
     pub(in crate::vulkan) image: VkImage,
     pub(in crate::vulkan) image_view: VkImageView,

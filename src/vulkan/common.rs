@@ -23,7 +23,7 @@ pub(super) fn map_memory(
 ) -> Result<(), String> {
     let mut p = null_mut();
     check_res!(
-        vkMapMemory(device, memory, 0, u64::MAX, 0, &mut p),
+        vkMapMemory(device, memory, 0, VK_WHOLE_SIZE as u64, 0, &mut p),
         "failed to map a memory."
     );
     unsafe { memcpy(p, data, size) };
