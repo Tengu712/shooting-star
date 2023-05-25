@@ -26,7 +26,7 @@ mod common;
 mod load;
 pub mod math;
 mod new;
-mod obj;
+pub(crate) mod obj;
 mod render;
 mod terminate;
 
@@ -66,9 +66,11 @@ pub(crate) struct VulkanApp {
     // resources
     uniform_buffer: Buffer,
     square: Model,
-    max_img_tex_cnt: u32,
     img_texs: Vec<Option<Texture>>,
-    img_texs_map: HashMap<u32, usize>,
+    /// A hashmap:
+    ///   - whose key is an image texture id
+    ///   - whose value is VulkanApp::img_texs index and the descriptor sets index
+    img_texs_map: HashMap<usize, usize>,
 }
 
 #[repr(C)]
@@ -87,3 +89,5 @@ pub struct UniformBuffer {
     pub perse: [f32; 16],
     pub ortho: [f32; 16],
 }
+
+pub const DEFAULT_IMAGE_TEXTURE_ID: usize = 0;

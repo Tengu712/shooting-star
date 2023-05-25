@@ -1,13 +1,13 @@
 use super::*;
 
-pub(in crate::vulkan) struct Texture {
-    pub(in crate::vulkan) image: VkImage,
-    pub(in crate::vulkan) image_view: VkImageView,
-    pub(in crate::vulkan) memory: VkDeviceMemory,
+pub(crate) struct Texture {
+    pub(crate) image: VkImage,
+    pub(crate) image_view: VkImageView,
+    pub(crate) memory: VkDeviceMemory,
 }
 
 impl Texture {
-    pub(in crate::vulkan) fn new(
+    pub(crate) fn new(
         device: VkDevice,
         phys_device_mem_props: &VkPhysicalDeviceMemoryProperties,
         format: VkFormat,
@@ -116,7 +116,7 @@ impl Texture {
         })
     }
 
-    pub(in crate::vulkan) fn terminate(self, device: VkDevice) {
+    pub(crate) fn terminate(self, device: VkDevice) {
         unsafe {
             vkDestroyImageView(device, self.image_view, null());
             vkFreeMemory(device, self.memory, null());

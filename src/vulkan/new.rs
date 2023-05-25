@@ -900,7 +900,7 @@ impl VulkanApp {
             texture
         };
 
-        Self::load(
+        Self::load_to_descriptor_set(
             device,
             descriptor_sets[0],
             uniform_buffer.buffer,
@@ -909,7 +909,7 @@ impl VulkanApp {
         );
 
         let img_texs = Vec::from([Some(def_img_tex)]);
-        let img_texs_map = HashMap::from([(0, 0)]);
+        let img_texs_map = HashMap::from([(DEFAULT_IMAGE_TEXTURE_ID, 0)]);
 
         // ========================================================================================================= //
         //     finish                                                                                                //
@@ -947,7 +947,6 @@ impl VulkanApp {
             // resources
             uniform_buffer,
             square,
-            max_img_tex_cnt,
             img_texs,
             img_texs_map,
         }

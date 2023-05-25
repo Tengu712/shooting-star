@@ -11,7 +11,7 @@ use log::*;
 
 fn main() {
     let window_app = window::WindowApp::new("Sample Program\0", 640, 480);
-    let vulkan_app = vulkan::VulkanApp::new(&window_app, 10);
+    let mut vulkan_app = vulkan::VulkanApp::new(&window_app, 10);
     while window_app.do_events() {
         if let Err(e) = vulkan_app.render() {
             ss_warning(&e);
