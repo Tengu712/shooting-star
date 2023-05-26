@@ -17,6 +17,7 @@ Following commands are required:
 
 Following subcommands are required:
 
+* glslc
 * clang (needed for bindgen)
 * bindgen (install by `cargo install bindgen-cli`)
 
@@ -32,6 +33,5 @@ Following dependencies are required:
 
 ```
 $ make
-$ cargo test
 $ cargo build
 ```
