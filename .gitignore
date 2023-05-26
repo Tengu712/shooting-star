@@ -1,16 +1,7 @@
-/build/
-/tmp/
+/.vscode
 
-/.ninja_log
-/build.ninja
-/dev
+/src/tpl.rs
 
-*.a
-*.lib
-*.o
-*.obj
+target
 
-*.out
-*.exe
-*.pdb
-*.dll
+*.spv
