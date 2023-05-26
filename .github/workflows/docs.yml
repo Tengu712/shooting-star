@@ -1,0 +1,62 @@
+name: Documentations
+on:
+  push:
+    branches:
+      - master
+jobs:
+  doc:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: cache bindgen
+        id: cache-bindgen
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-bindgen
+        with:
+          path: ~/.cargo/bin
+          key: ${{ runner.os }}-build-${{ env.cache-name }}
+          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}
+      - if: ${{ steps.cache-bindgen.outputs.cache-hit != 'true' }}
+        name: install bindgen
+        run: cargo install bindgen-cli
+      - name: cache vulkan headers
+        id: cache-vulkan-headers
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-vulkan-headers
+        with:
+          path: ~/.headers
+          key: ${{ runner.os }}-build-${{ env.cache-name }}
+          restore-keys: ${{ runner.os }}-build-${{ env.cache-name }}
+      - if: ${{ steps.cache-vulkan-headers.outputs.cache-hit != 'true' }}
+        name: get vulkan headers
+        run: |
+          wget https://skdassoc.com/data/vulkan-headers.zip
+          unzip vulkan-headers.zip
+          if [ ! -d ~/.headers ]; then mkdir ~/.headers; fi
+          mv vulkan ~/.headers
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: cargo doc
+        run: |
+          export PATH=$PATH:~/.cargo/bin
+          export BINDGEN_EXTRA_CLANG_ARGS=-I$HOME/.headers
+          make bindgen
+          cargo doc --no-deps
+      - name: prepare
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git fetch origin gh-pages
+          git checkout gh-pages
+          rm -rf cargo-doc
+          mv target/doc cargo-doc
+      - name: get current time
+        env:
+          TZ: 'Asia/Tokyo'
+        run: echo "CURRENT_DATETIME=$(date +'%Y-%m-%d %H:%M')" >> $GITHUB_ENV
+      - name: commit and push
+        run: |
+          git add cargo-doc
+          git commit -m "docs: ${{ env.CURRENT_DATETIME }}"
+          git push origin gh-pages
