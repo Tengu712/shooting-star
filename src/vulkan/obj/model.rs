@@ -1,7 +1,7 @@
 use super::*;
 
 use std::mem::size_of;
-use std::os::raw::{c_ulong, c_void};
+use std::os::raw::c_void;
 
 #[repr(C)]
 pub(in crate::vulkan) struct Vertex {
@@ -30,15 +30,15 @@ impl Model {
             device,
             phys_device_mem_prop,
             vtxs_size as u64,
-            VkBufferUsageFlagBits_VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            VkBufferUsageFlagBits_VK_BUFFER_USAGE_VERTEX_BUFFER_BIT as VkBufferUsageFlags,
+            VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT as VkMemoryPropertyFlags,
         )?;
         let index_buffer = Buffer::new(
             device,
             phys_device_mem_prop,
             idxs_size as u64,
-            VkBufferUsageFlagBits_VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+            VkBufferUsageFlagBits_VK_BUFFER_USAGE_INDEX_BUFFER_BIT as VkBufferUsageFlags,
+            VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT as VkMemoryPropertyFlags,
         )?;
 
         // map memories
@@ -46,13 +46,13 @@ impl Model {
             device,
             vertex_buffer.memory,
             vtxs.as_ptr() as *const c_void,
-            vtxs_size as c_ulong,
+            vtxs_size,
         )?;
         map_memory(
             device,
             index_buffer.memory,
             idxs.as_ptr() as *const c_void,
-            idxs_size as c_ulong,
+            idxs_size,
         )?;
 
         // finish

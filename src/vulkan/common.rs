@@ -1,6 +1,6 @@
 use super::*;
 
-use std::os::raw::{c_ulong, c_void};
+use std::os::raw::c_void;
 
 pub(super) fn get_memory_type_index(
     phys_device_mem_props: &VkPhysicalDeviceMemoryProperties,
@@ -19,14 +19,15 @@ pub(super) fn map_memory(
     device: VkDevice,
     memory: VkDeviceMemory,
     data: *const c_void,
-    size: c_ulong,
+    size: usize,
 ) -> Result<(), String> {
     let mut p = null_mut();
     check_res!(
         vkMapMemory(device, memory, 0, VK_WHOLE_SIZE as u64, 0, &mut p),
         "failed to map a memory."
     );
-    unsafe { memcpy(p, data, size) };
+    // NOTE: size_t definition is different between Windows and Linux.
+    unsafe { memcpy(p, data, size.try_into().unwrap()) };
     unsafe { vkUnmapMemory(device, memory) };
     Ok(())
 }
@@ -39,16 +40,16 @@ pub(super) fn copy_memory(
     width: u32,
     height: u32,
     image: VkImage,
-    size: VkDeviceSize,
+    size: usize,
     data: *const c_void,
 ) -> Result<(), String> {
     // create a staging buffer and map data
     let staging = Buffer::new(
         device,
         phys_device_mem_props,
-        size,
-        VkBufferUsageFlagBits_VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+        size as VkDeviceSize,
+        VkBufferUsageFlagBits_VK_BUFFER_USAGE_TRANSFER_SRC_BIT as VkBufferUsageFlags,
+        VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT as VkMemoryPropertyFlags,
     )?;
     map_memory(device, staging.memory, data, size)?;
 
@@ -86,14 +87,14 @@ pub(super) fn copy_memory(
         sType: VkStructureType_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         pNext: null(),
         srcAccessMask: 0,
-        dstAccessMask: VkAccessFlagBits_VK_ACCESS_TRANSFER_WRITE_BIT,
+        dstAccessMask: VkAccessFlagBits_VK_ACCESS_TRANSFER_WRITE_BIT as VkAccessFlags,
         oldLayout: VkImageLayout_VK_IMAGE_LAYOUT_UNDEFINED,
         newLayout: VkImageLayout_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         srcQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED as u32,
         dstQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED as u32,
         image,
         subresourceRange: VkImageSubresourceRange {
-            aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+            aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT as VkImageAspectFlags,
             baseMipLevel: 0,
             levelCount: 1,
             baseArrayLayer: 0,
@@ -103,8 +104,8 @@ pub(super) fn copy_memory(
     unsafe {
         vkCmdPipelineBarrier(
             command_buffer,
-            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_ALL_COMMANDS_BIT as VkPipelineStageFlags,
+            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_TRANSFER_BIT as VkPipelineStageFlags,
             0,
             0,
             null(),
@@ -121,7 +122,7 @@ pub(super) fn copy_memory(
         bufferRowLength: 0,
         bufferImageHeight: 0,
         imageSubresource: VkImageSubresourceLayers {
-            aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+            aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT as VkImageAspectFlags,
             mipLevel: 0,
             baseArrayLayer: 0,
             layerCount: 1,
@@ -148,15 +149,15 @@ pub(super) fn copy_memory(
     let barriers = [VkImageMemoryBarrier {
         sType: VkStructureType_VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         pNext: null(),
-        srcAccessMask: VkAccessFlagBits_VK_ACCESS_TRANSFER_WRITE_BIT,
-        dstAccessMask: VkAccessFlagBits_VK_ACCESS_SHADER_READ_BIT,
+        srcAccessMask: VkAccessFlagBits_VK_ACCESS_TRANSFER_WRITE_BIT as VkAccessFlags,
+        dstAccessMask: VkAccessFlagBits_VK_ACCESS_SHADER_READ_BIT as VkAccessFlags,
         oldLayout: VkImageLayout_VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         newLayout: VkImageLayout_VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         srcQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED as u32,
         dstQueueFamilyIndex: VK_QUEUE_FAMILY_IGNORED as u32,
         image,
         subresourceRange: VkImageSubresourceRange {
-            aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+            aspectMask: VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT as VkImageAspectFlags,
             baseMipLevel: 0,
             levelCount: 1,
             baseArrayLayer: 0,
@@ -166,8 +167,8 @@ pub(super) fn copy_memory(
     unsafe {
         vkCmdPipelineBarrier(
             command_buffer,
-            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_TRANSFER_BIT as VkPipelineStageFlags,
+            VkPipelineStageFlagBits_VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT as VkPipelineStageFlags,
             0,
             0,
             null(),

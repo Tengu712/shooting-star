@@ -6,7 +6,7 @@ use crate::window::WindowApp;
 use std::fs::File;
 use std::io::Read;
 use std::mem::size_of;
-use std::os::raw::{c_char, c_ulong, c_void};
+use std::os::raw::{c_char, c_void};
 
 const APP_NAME: *const c_char = [
     'V' as c_char,
@@ -74,8 +74,7 @@ const DEF_IMG_TEX_HEIGHT: u32 = 2;
 const DEF_IMG_TEX_PIXELS: [u8; 16] = [
     255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255,
 ];
-const DEF_IMG_TEX_PIXELS_SIZE: VkDeviceSize =
-    (size_of::<u8>() * DEF_IMG_TEX_PIXELS.len()) as VkDeviceSize;
+const DEF_IMG_TEX_PIXELS_SIZE: usize = size_of::<u8>() * DEF_IMG_TEX_PIXELS.len();
 
 impl VulkanApp {
     /// A constructor.
@@ -235,7 +234,7 @@ impl VulkanApp {
             let ci = VkFenceCreateInfo {
                 sType: VkStructureType_VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
                 pNext: null(),
-                flags: VkFenceCreateFlagBits_VK_FENCE_CREATE_SIGNALED_BIT,
+                flags: VkFenceCreateFlagBits_VK_FENCE_CREATE_SIGNALED_BIT as VkFenceCreateFlags,
             };
             let mut fence = null_mut();
             check!(
@@ -548,14 +547,16 @@ impl VulkanApp {
                     binding: 0,
                     descriptorType: VkDescriptorType_VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     descriptorCount: 1,
-                    stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                    stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT
+                        as VkShaderStageFlags,
                     pImmutableSamplers: null(),
                 },
                 VkDescriptorSetLayoutBinding {
                     binding: 1,
                     descriptorType: VkDescriptorType_VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                     descriptorCount: 1,
-                    stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_FRAGMENT_BIT,
+                    stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_FRAGMENT_BIT
+                        as VkShaderStageFlags,
                     pImmutableSamplers: null(),
                 },
             ];
@@ -621,7 +622,7 @@ impl VulkanApp {
 
         let pipeline_layout = {
             let ranges = [VkPushConstantRange {
-                stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                stageFlags: VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT as VkShaderStageFlags,
                 offset: 0,
                 size: size_of::<PushConstant>() as u32,
             }];
@@ -739,7 +740,7 @@ impl VulkanApp {
                 depthClampEnable: VK_FALSE,
                 rasterizerDiscardEnable: VK_FALSE,
                 polygonMode: VkPolygonMode_VK_POLYGON_MODE_FILL,
-                cullMode: VkCullModeFlagBits_VK_CULL_MODE_NONE,
+                cullMode: VkCullModeFlagBits_VK_CULL_MODE_NONE as VkCullModeFlags,
                 frontFace: VkFrontFace_VK_FRONT_FACE_COUNTER_CLOCKWISE,
                 depthBiasEnable: VK_FALSE,
                 depthBiasConstantFactor: 0.0,
@@ -762,6 +763,10 @@ impl VulkanApp {
             };
 
             // color blend state
+            let color_write_mask = VkColorComponentFlagBits_VK_COLOR_COMPONENT_R_BIT
+                | VkColorComponentFlagBits_VK_COLOR_COMPONENT_G_BIT
+                | VkColorComponentFlagBits_VK_COLOR_COMPONENT_B_BIT
+                | VkColorComponentFlagBits_VK_COLOR_COMPONENT_A_BIT;
             let color_blend_attachments = [VkPipelineColorBlendAttachmentState {
                 blendEnable: VK_TRUE,
                 srcColorBlendFactor: VkBlendFactor_VK_BLEND_FACTOR_SRC_ALPHA,
@@ -770,10 +775,7 @@ impl VulkanApp {
                 srcAlphaBlendFactor: VkBlendFactor_VK_BLEND_FACTOR_SRC_ALPHA,
                 dstAlphaBlendFactor: VkBlendFactor_VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
                 alphaBlendOp: VkBlendOp_VK_BLEND_OP_ADD,
-                colorWriteMask: VkColorComponentFlagBits_VK_COLOR_COMPONENT_R_BIT
-                    | VkColorComponentFlagBits_VK_COLOR_COMPONENT_G_BIT
-                    | VkColorComponentFlagBits_VK_COLOR_COMPONENT_B_BIT
-                    | VkColorComponentFlagBits_VK_COLOR_COMPONENT_A_BIT,
+                colorWriteMask: color_write_mask as VkColorComponentFlags,
             }];
             let color_blend = VkPipelineColorBlendStateCreateInfo {
                 sType: VkStructureType_VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -850,20 +852,21 @@ impl VulkanApp {
                     1000.0,
                 ),
             };
+            let uniform_buffer_flags = VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                | VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
             let uniform_buffer = Buffer::new(
                 device,
                 &phys_device_mem_props,
                 size_of::<UniformBuffer>() as VkDeviceSize,
-                VkBufferUsageFlagBits_VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
-                    | VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                VkBufferUsageFlagBits_VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT as VkBufferUsageFlags,
+                uniform_buffer_flags as VkMemoryPropertyFlags,
             )
             .unwrap_or_else(|e| ss_error(&format!("failed to create a uniform buffer : {e}")));
             map_memory(
                 device,
                 uniform_buffer.memory,
                 &data as *const _ as *const c_void,
-                size_of::<UniformBuffer>() as c_ulong,
+                size_of::<UniformBuffer>(),
             )
             .unwrap_or_else(|e| ss_error(&format!("failed to map a uniform buffer : {e}")));
             uniform_buffer
@@ -873,15 +876,16 @@ impl VulkanApp {
             .unwrap_or_else(|e| ss_error(&format!("failed to create a square : {e}")));
 
         let def_img_tex = {
+            let usage = VkImageUsageFlagBits_VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                | VkImageUsageFlagBits_VK_IMAGE_USAGE_SAMPLED_BIT;
             let texture = Texture::new(
                 device,
                 &phys_device_mem_props,
                 VkFormat_VK_FORMAT_R8G8B8A8_UNORM,
                 DEF_IMG_TEX_WIDTH,
                 DEF_IMG_TEX_HEIGHT,
-                VkImageUsageFlagBits_VK_IMAGE_USAGE_TRANSFER_DST_BIT
-                    | VkImageUsageFlagBits_VK_IMAGE_USAGE_SAMPLED_BIT,
-                VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+                usage as VkImageUsageFlags,
+                VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT as VkImageAspectFlags,
             )
             .unwrap_or_else(|e| {
                 ss_error(&format!("failed to create a default image texture : {e}"))

@@ -17,15 +17,16 @@ pub fn load_image_texture(
             pixels.len(),
         ));
     }
+    let flags = VkImageUsageFlagBits_VK_IMAGE_USAGE_TRANSFER_DST_BIT
+        | VkImageUsageFlagBits_VK_IMAGE_USAGE_SAMPLED_BIT;
     let img_tex = Texture::new(
         vulkan_app.device,
         &vulkan_app.phys_device_mem_props,
         VkFormat_VK_FORMAT_R8G8B8A8_UNORM,
         width,
         height,
-        VkImageUsageFlagBits_VK_IMAGE_USAGE_TRANSFER_DST_BIT
-            | VkImageUsageFlagBits_VK_IMAGE_USAGE_SAMPLED_BIT,
-        VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT,
+        flags as VkImageUsageFlags,
+        VkImageAspectFlagBits_VK_IMAGE_ASPECT_COLOR_BIT as VkImageAspectFlags,
     )?;
     copy_memory(
         vulkan_app.device,
@@ -35,7 +36,7 @@ pub fn load_image_texture(
         width,
         height,
         img_tex.image,
-        (size_of::<u8>() * pixels.len()) as VkDeviceSize,
+        size_of::<u8>() * pixels.len(),
         pixels.as_ptr() as *const c_void,
     )?;
     vulkan_app.load(id, img_tex)?;

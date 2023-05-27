@@ -54,7 +54,8 @@ impl Texture {
             let index = get_memory_type_index(
                 phys_device_mem_props,
                 &reqs,
-                VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VkMemoryPropertyFlagBits_VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                    as VkMemoryPropertyFlags,
             )
             .ok_or(String::from("failed to get a memory type index."))?;
             let ai = VkMemoryAllocateInfo {

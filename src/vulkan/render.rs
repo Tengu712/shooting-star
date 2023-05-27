@@ -1,11 +1,11 @@
 use super::*;
 
 use std::mem::size_of;
-use std::os::raw::{c_ulong, c_void};
+use std::os::raw::c_void;
 
 impl VulkanApp {
     /// A method for rendering.
-    /// 
+    ///
     /// - `uniform_buffer` - update a uniform buffer if it isn't None
     /// - `tasks` - processed just in order
     pub fn render(
@@ -23,7 +23,7 @@ impl VulkanApp {
                 self.device,
                 self.uniform_buffer.memory,
                 n as *const _ as *const c_void,
-                size_of::<UniformBuffer>() as c_ulong,
+                size_of::<UniformBuffer>(),
             )?;
         }
 
@@ -62,6 +62,7 @@ impl VulkanApp {
             vkResetCommandBuffer(
                 self.command_buffer,
                 VkCommandBufferResetFlagBits_VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT
+                    as VkCommandBufferResetFlags,
             ),
             "failed to reset a command buffer."
         );
@@ -164,7 +165,7 @@ impl VulkanApp {
                         vkCmdPushConstants(
                             self.command_buffer,
                             self.pipeline_layout,
-                            VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT,
+                            VkShaderStageFlagBits_VK_SHADER_STAGE_VERTEX_BIT as VkShaderStageFlags,
                             0,
                             size_of::<PushConstant>() as u32,
                             n as *const _ as *const c_void,
@@ -212,7 +213,8 @@ impl VulkanApp {
             waitSemaphoreCount: wait_semaphores.len() as u32,
             pWaitSemaphores: wait_semaphores.as_ptr(),
             pWaitDstStageMask:
-                &VkPipelineStageFlagBits_VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                &(VkPipelineStageFlagBits_VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                    as VkPipelineStageFlags),
             commandBufferCount: commands.len() as u32,
             pCommandBuffers: commands.as_ptr(),
             signalSemaphoreCount: signal_semaphores.len() as u32,
