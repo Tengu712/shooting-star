@@ -7,6 +7,7 @@
 #else
 #  define VK_USE_PLATFORM_WIN32_KHR
 #  include <windows.h>
+#  include <xinput.h>
 #endif
 
 #include <vulkan/vulkan.h>
