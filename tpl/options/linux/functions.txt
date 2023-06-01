@@ -1,0 +1,15 @@
+XOpenDisplay
+XCreateSimpleWindow
+XDefaultRootWindow
+XStoreName
+XSetWMNormalHints
+XInternAtom
+XSetWMProtocols
+XMapWindow
+XFlush
+XPending
+XNextEvent
+XSelectInput
+XkbKeycodeToKeysym
+open
+read

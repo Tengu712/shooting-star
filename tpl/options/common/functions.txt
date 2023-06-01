@@ -1,0 +1,93 @@
+# =========================================================================== #
+#     initialization                                                          #
+# =========================================================================== #
+vkCreateInstance
+vkEnumeratePhysicalDevices
+vkGetPhysicalDeviceMemoryProperties
+vkGetPhysicalDeviceQueueFamilyProperties
+vkCreateDevice
+vkGetDeviceQueue
+vkCreateCommandPool
+vkCreateXlibSurfaceKHR
+vkCreateWin32SurfaceKHR
+vkGetPhysicalDeviceSurfaceFormatsKHR
+vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+vkCreateSwapchainKHR
+vkGetSwapchainImagesKHR
+vkCreateImageView
+vkCreateRenderPass
+vkCreateFramebuffer
+vkAllocateCommandBuffers
+vkCreateFence
+vkCreateSemaphore
+vkCreateShaderModule
+vkCreateSampler
+vkCreateDescriptorSetLayout
+vkCreateDescriptorPool
+vkAllocateDescriptorSets
+vkCreatePipelineLayout
+vkCreateGraphicsPipelines
+# =========================================================================== #
+#     buffer or texture                                                       #
+# =========================================================================== #
+vkCreateBuffer
+vkGetBufferMemoryRequirements
+vkAllocateMemory
+vkBindBufferMemory
+vkMapMemory
+vkUnmapMemory
+vkCreateImage
+vkGetImageMemoryRequirements
+vkAllocateMemory
+vkBindImageMemory
+vkCmdPipelineBarrier
+vkCmdCopyBufferToImage
+vkCmdPipelineBarrier
+vkUpdateDescriptorSets
+# =========================================================================== #
+#     termination                                                             #
+# =========================================================================== #
+vkDeviceWaitIdle
+vkDestroyInstance
+vkDestroyDevice
+vkDestroyCommandPool
+vkDestroySurfaceKHR
+vkDestroySwapchainKHR
+vkDestroyImageView
+vkDestroyRenderPass
+vkDestroyFramebuffer
+vkFreeCommandBuffers
+vkDestroyFence
+vkDestroySemaphore
+vkDestroyShaderModule
+vkDestroySampler
+vkDestroyDescriptorSetLayout
+vkDestroyDescriptorPool
+vkDestroyPipelineLayout
+vkDestroyPipeline
+vkDestroyBuffer
+vkFreeMemory
+vkDestroyImage
+# =========================================================================== #
+#     rendering                                                               #
+# =========================================================================== #
+vkAcquireNextImageKHR
+vkWaitForFences
+vkResetFences
+vkResetCommandBuffer
+vkBeginCommandBuffer
+vkCmdBeginRenderPass
+vkCmdBindPipeline
+vkCmdBindVertexBuffers
+vkCmdBindIndexBuffer
+vkCmdBindDescriptorSets
+vkCmdPushConstants
+vkCmdDrawIndexed
+vkCmdEndRenderPass
+vkEndCommandBuffer
+vkQueueSubmit
+vkQueuePresentKHR
+# =========================================================================== #
+#     other than Vulkan                                                       #
+# =========================================================================== #
+memcpy
