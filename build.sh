@@ -25,13 +25,21 @@ function do_glslc() {
     glslc src/shader.frag -o shader.frag.spv
 }
 
+function build_tpl() {
+    clang -c -o tpl/tpl.o tpl/tpl.c
+    llvm-ar rc tpl/tpl.a tpl/tpl.o
+}
+
 if [ $# -eq 0 ]; then
     do_bindgen
     do_glslc
+    build_tpl
 elif [ $1 = 'bindgen' ]; then
     do_bindgen
 elif [ $1 = 'glslc' ]; then
     do_glslc
+elif [ $1 = 'tpl' ]; then
+    build_tpl
 else
     echo "invalid argument $1 passed."
     exit 1

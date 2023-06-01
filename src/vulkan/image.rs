@@ -8,13 +8,13 @@ pub fn load_image_texture(
     id: usize,
     width: u32,
     height: u32,
-    pixels: &[u8],
+    bitmap: &[u8],
 ) -> Result<(), String> {
-    if width * height * 4 != pixels.len() as u32 {
+    if width * height * 4 != bitmap.len() as u32 {
         return Err(format!(
-            "width {width} and height {height} passed so pixels array length expected {} but passed {}.",
+            "width {width} and height {height} passed so bitmap array length expected {} but passed {}.",
             width * height * 4,
-            pixels.len(),
+            bitmap.len(),
         ));
     }
     let flags = VkImageUsageFlagBits_VK_IMAGE_USAGE_TRANSFER_DST_BIT
@@ -36,8 +36,8 @@ pub fn load_image_texture(
         width,
         height,
         img_tex.image,
-        size_of::<u8>() * pixels.len(),
-        pixels.as_ptr() as *const c_void,
+        size_of::<u8>() * bitmap.len(),
+        bitmap.as_ptr() as *const c_void,
     )?;
     vulkan_app.load(id, img_tex)?;
     Ok(())

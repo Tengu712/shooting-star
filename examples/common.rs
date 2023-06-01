@@ -1,5 +1,5 @@
 use sstar::{
-    font::*,
+    bitmap::*,
     log::*,
     vulkan::{image::*, *},
     window::*,
@@ -19,42 +19,38 @@ fn main() {
     let mut vulkan_app = VulkanApp::new(&window_app, 10);
 
     // create and load an image texture
+    let image_bitmap = create_bitmap_from_file("./shape.png").unwrap();
     check(load_image_texture(
         &mut vulkan_app,
         1,
-        2,
-        2,
-        &[
-            255, 0, 0, 255, // red (upper left)
-            0, 255, 0, 255, // green (upper right)
-            0, 0, 255, 255, // blue (lower left)
-            0, 0, 0, 255, // black (lower right)
-        ],
+        image_bitmap.width,
+        image_bitmap.height,
+        &image_bitmap.data,
     ));
 
     // rasterize a text
     let rasterizer = GlyphRasterizer::new("./ipaexm.ttf").unwrap();
-    let (pxs, w, h) = rasterizer.rasterize("Hello 世界!", 32.0);
-    // create pixels and map the text
-    let text_pixels_width = 2_usize.pow((w as f64).log2().ceil() as u32);
-    let text_pixels_height = 2_usize.pow((h as f64).log2().ceil() as u32);
-    let mut pixels_text = vec![0; text_pixels_width * text_pixels_height * 4];
-    for j in 0..h {
-        for i in 0..w {
-            let idx = j * text_pixels_width + i;
-            pixels_text[idx * 4 + 0] = 255;
-            pixels_text[idx * 4 + 1] = 255;
-            pixels_text[idx * 4 + 2] = 255;
-            pixels_text[idx * 4 + 3] = pxs[j * w + i];
+    let text_bitmap = rasterizer.rasterize("Hello 世界!", 32.0);
+    // create bitmap and map the text
+    let texts_bitmap_width = 2_usize.pow((text_bitmap.width as f64).log2().ceil() as u32);
+    let texts_bitmap_height = 2_usize.pow((text_bitmap.height as f64).log2().ceil() as u32);
+    let mut texts_bitmap = vec![0; texts_bitmap_width * texts_bitmap_height * 4];
+    for j in 0..(text_bitmap.height as usize) {
+        for i in 0..(text_bitmap.width as usize) {
+            let idx = j * texts_bitmap_width + i;
+            texts_bitmap[idx * 4 + 0] = 255;
+            texts_bitmap[idx * 4 + 1] = 255;
+            texts_bitmap[idx * 4 + 2] = 255;
+            texts_bitmap[idx * 4 + 3] = text_bitmap.data[j * text_bitmap.width as usize + i];
         }
     }
     // create and load an image texture of the text
     check(load_image_texture(
         &mut vulkan_app,
         2,
-        text_pixels_width as u32,
-        text_pixels_height as u32,
-        &pixels_text,
+        texts_bitmap_width as u32,
+        texts_bitmap_height as u32,
+        &texts_bitmap,
     ));
 
     // mainloop
@@ -83,8 +79,8 @@ fn main() {
         // push constant for a text
         let mut pc_text = PushConstant::default();
         pc_text.scl = [
-            text_pixels_width as f32,
-            text_pixels_height as f32,
+            texts_bitmap_width as f32,
+            texts_bitmap_height as f32,
             1.0,
             0.0,
         ];

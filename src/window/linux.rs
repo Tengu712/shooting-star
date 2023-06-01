@@ -206,7 +206,10 @@ impl WindowApp {
                 number: 0,
             };
             let js_event_size = size_of::<js_event>();
-            if unsafe { crate::tpl::read(self.fd, &mut jevent as *mut _ as *mut c_void, js_event_size) == js_event_size as isize } {
+            if unsafe {
+                crate::tpl::read(self.fd, &mut jevent as *mut _ as *mut c_void, js_event_size)
+                    == js_event_size as isize
+            } {
                 if jevent.type_ as u32 & JS_EVENT_BUTTON > 0 {
                     if let Some(kc) = convert_js_to_ss(jevent.number) {
                         if jevent.value == 1 {
@@ -220,19 +223,27 @@ impl WindowApp {
                 if jevent.type_ as u32 & JS_EVENT_AXIS > 0 {
                     // pov
                     if jevent.number == 6 {
-                        self.update_axis(Keycode::JsButtonRight, Keycode::JsButtonLeft, jevent.value);
+                        self.update_axis(
+                            Keycode::JsButtonRight,
+                            Keycode::JsButtonLeft,
+                            jevent.value,
+                        );
                     } else if jevent.number == 7 {
                         self.update_axis(Keycode::JsButtonDown, Keycode::JsButtonUp, jevent.value);
                     }
                     // axis
                     else if jevent.number == 0 {
-                        self.input_states.insert(Keycode::JsAxisLX, jevent.value as i32);
+                        self.input_states
+                            .insert(Keycode::JsAxisLX, jevent.value as i32);
                     } else if jevent.number == 1 {
-                        self.input_states.insert(Keycode::JsAxisLY, jevent.value as i32);
+                        self.input_states
+                            .insert(Keycode::JsAxisLY, jevent.value as i32);
                     } else if jevent.number == 3 {
-                        self.input_states.insert(Keycode::JsAxisRX, jevent.value as i32);
+                        self.input_states
+                            .insert(Keycode::JsAxisRX, jevent.value as i32);
                     } else if jevent.number == 4 {
-                        self.input_states.insert(Keycode::JsAxisRY, jevent.value as i32);
+                        self.input_states
+                            .insert(Keycode::JsAxisRY, jevent.value as i32);
                     }
                 }
             }
@@ -273,11 +284,17 @@ impl WindowApp {
     pub fn terminate(self) {}
 
     fn update_axis(&mut self, kc_greater: Keycode, kc_less: Keycode, value: __s16) {
-        if  value > POV_THRESHOLD {
-            let v = *self.input_states.entry(kc_greater.clone()).or_insert_with(|| 0);
+        if value > POV_THRESHOLD {
+            let v = *self
+                .input_states
+                .entry(kc_greater.clone())
+                .or_insert_with(|| 0);
             self.input_states.insert(kc_greater, v);
         } else if value < -POV_THRESHOLD {
-            let v = *self.input_states.entry(kc_less.clone()).or_insert_with(|| 0);
+            let v = *self
+                .input_states
+                .entry(kc_less.clone())
+                .or_insert_with(|| 0);
             self.input_states.insert(kc_less, v);
         } else {
             self.input_states.remove(&kc_greater);

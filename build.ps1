@@ -23,13 +23,21 @@ Function DoGLSLC() {
     glslc src/shader.frag -o shader.frag.spv
 }
 
+Function BuildTPL() {
+    clang -c -o tpl/tpl.obj tpl/tpl.c
+    llvm-ar rc tpl/tpl.lib tpl/tpl.obj
+}
+
 If ( $Args[0].Length -eq 0 ) {
     DoBindgen
     DoGLSLC
+    BuildTPL
 } ElseIf ( $Args[0] -eq "bindgen" ) {
     DoBindgen
 } ElseIf ( $Args[0] -eq "glslc" ) {
     DoGLSLC
+} ElseIf ( $Args[0] -eq "tpl" ) {
+    BuildTPL
 } Else {
     $Args0 = $Args[0]
     echo "invalid argument $Args0 passed."

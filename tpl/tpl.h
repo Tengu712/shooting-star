@@ -17,3 +17,6 @@
 
 #include <vulkan/vulkan.h>
 #include <string.h>
+
+// a function wrapping stbi_load
+unsigned char *image_file_to_bitmap(char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
