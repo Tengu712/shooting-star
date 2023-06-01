@@ -4,22 +4,14 @@
 
 A small frontend framework for game development. This framework is supported on Windows and Linux.
 
-## Usage
-
-Look at [docs/usage.md](./docs/usage.md).
-
 ## Build
 
 Following commands are required:
 
-* make (to create tpl.rs)
-* cargo (to build)
-
-Following subcommands are required:
-
-* glslc
-* clang (needed for bindgen)
 * bindgen (install by `cargo install bindgen-cli`)
+* cargo
+* clang
+* glslc
 
 Following dependencies are required:
 
@@ -31,7 +23,16 @@ Following dependencies are required:
   * xinput
   * vulkan-1
 
+Run following commands to build in Linux:
+
 ```
-$ make
+$ ./build.sh
 $ cargo build
+```
+
+or in Windows:
+
+```
+> powershell -NoProfile -ExecutionPolicy Unrestricted .\build.ps1
+> cargo build
 ```

@@ -41,7 +41,7 @@ jobs:
         run: |
           export PATH=$PATH:~/.cargo/bin
           export BINDGEN_EXTRA_CLANG_ARGS=-I$HOME/.headers
-          make bindgen
+          ./build.sh bindgen
           cargo doc --no-deps
       - name: prepare
         run: |

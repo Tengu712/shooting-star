@@ -1,0 +1,15 @@
+GetModuleHandleW
+RegisterClassExW
+AdjustWindowRect
+CreateWindowExW
+ShowWindow
+UpdateWindow
+PeekMessageW
+TranslateMessage
+DispatchMessageW
+DestroyWindow
+UnregisterClassW
+PostQuitMessage
+DefWindowProcW
+GetKeyboardState
+XInputGetState
