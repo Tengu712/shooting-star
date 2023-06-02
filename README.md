@@ -12,6 +12,7 @@ Following commands are required:
 * cargo
 * clang
 * glslc
+* llvm-ar
 
 Following dependencies are required:
 

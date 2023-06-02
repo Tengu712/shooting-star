@@ -10,3 +10,4 @@ VkColorComponentFlagBits
 VkBufferUsageFlagBits
 VkMemoryPropertyFlagBits
 VkAccessFlagBits
+stbtt_fontinfo
