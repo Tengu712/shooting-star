@@ -1,5 +1,5 @@
 use sstar::{
-    bitmap::*,
+    bitmap::{font::*, image::*},
     log::*,
     vulkan::{image::*, *},
     window::*,
@@ -19,7 +19,7 @@ fn main() {
     let mut vulkan_app = VulkanApp::new(&window_app, 10);
 
     // create and load an image texture
-    let image_bitmap = create_bitmap_from_file("./shape.png").unwrap();
+    let image_bitmap = create_bitmap_from_file("./examples/image.png").unwrap();
     check(load_image_texture(
         &mut vulkan_app,
         1,
@@ -29,8 +29,11 @@ fn main() {
     ));
 
     // rasterize a text
-    let rasterizer = GlyphRasterizer::new("./ipaexm.ttf").unwrap();
-    let text_bitmap = rasterizer.rasterize("Hello 世界!", 32.0);
+    let rasterizer = GlyphRasterizer::new("./examples/mplus-2p-medium.ttf").unwrap();
+    let text_bitmap = rasterizer.rasterize(
+        "L'enfer est plein de bonnes volontés ou désirs.\n地獄への道は善意で舗装されている。",
+        32.0,
+    );
     // create bitmap and map the text
     let texts_bitmap_width = 2_usize.pow((text_bitmap.width as f64).log2().ceil() as u32);
     let texts_bitmap_height = 2_usize.pow((text_bitmap.height as f64).log2().ceil() as u32);

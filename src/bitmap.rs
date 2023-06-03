@@ -1,3 +1,4 @@
+use crate::log::*;
 use crate::tpl::*;
 
 pub mod font;
