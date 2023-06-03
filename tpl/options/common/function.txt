@@ -91,4 +91,11 @@ vkQueuePresentKHR
 #     other than Vulkan                                                       #
 # =========================================================================== #
 memcpy
-image_file_to_bitmap
+stbi_load
+stbtt_InitFont
+stbtt_GetFontOffsetForIndex
+stbtt_ScaleForPixelHeight
+stbtt_FindGlyphIndex
+stbtt_GetFontVMetrics
+stbtt_GetGlyphHMetrics
+stbtt_GetGlyphBitmap
