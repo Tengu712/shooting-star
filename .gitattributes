@@ -1,3 +1,4 @@
-*   text eol=lf
+*     text eol=lf
 *.png binary
 *.ttf binary
+*.h   linguist-vendored
