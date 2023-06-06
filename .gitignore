@@ -1,7 +1,5 @@
 /.vscode
 
-/src/tpl.rs
-
 target
 
 *.a

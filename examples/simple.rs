@@ -1,7 +1,4 @@
-use sstar::{
-    vulkan::*,
-    window::*,
-};
+use sstar::{vulkan::*, window::*};
 
 fn main() {
     let mut window_app = WindowApp::new("Sample Program\0", 640, 480);

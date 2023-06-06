@@ -4,7 +4,7 @@
 
 A small frontend framework for game development. This framework is supported on Windows and Linux.
 
-# Example
+## Example
 
 Here is an example that creates a window and clears it default color:
 
@@ -13,6 +13,7 @@ use sstar::{
     vulkan::*,
     window::*,
 };
+
 fn main() {
     let mut window_app = WindowApp::new("Sample Program\0", 640, 480);
     let vulkan_app = VulkanApp::new(&window_app, 10);
@@ -24,15 +25,7 @@ fn main() {
 }
 ```
 
-## Build
-
-Following commands are required:
-
-* bindgen (install by `cargo install bindgen-cli`)
-* cargo
-* clang
-* glslc
-* llvm-ar
+## Dependencies
 
 Following dependencies are required:
 
@@ -44,16 +37,8 @@ Following dependencies are required:
   * xinput
   * vulkan-1
 
-Run following commands to build in Linux:
+## License
 
-```
-$ ./build.sh
-$ cargo build
-```
-
-or in Windows:
-
-```
-> powershell -NoProfile -ExecutionPolicy Unrestricted .\build.ps1
-> cargo build
-```
+This software (shooting-star) is published under the CC0 public domain.
+However, some dependencies may be linked when building an app using this software.
+See [LICENSE-ALL](https://github.com/Tengu712/shooting-star/LICENSE-ALL) in detail.
