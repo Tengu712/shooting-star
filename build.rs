@@ -30,10 +30,6 @@ fn to_regx(s: &str) -> String {
 fn linux() {
     println!("cargo:rustc-link-lib=X11");
     println!("cargo:rustc-link-lib=vulkan");
-    cc::Build::new()
-        .file("./src/tpl.c")
-        .include("./src")
-        .compile("libtpl.a");
 }
 
 #[cfg(target_os = "windows")]
@@ -41,10 +37,6 @@ fn windows() {
     println!("cargo:rustc-link-lib=user32");
     println!("cargo:rustc-link-lib=Xinput");
     println!("cargo:rustc-link-lib=vulkan-1");
-    cc::Build::new()
-        .file("./src/tpl.c")
-        .include("./src")
-        .compile("./tpl.lib");
 }
 
 fn main() {
@@ -64,6 +56,11 @@ fn main() {
         .expect("failed to convert tpl.h to tpl.rs")
         .write_to_file(out_path.join("bindings.rs"))
         .expect("failed to write tpl.rs");
+
+    cc::Build::new()
+        .file("./src/tpl.c")
+        .include("./src")
+        .compile("tpl");
 
     println!("cargo:rustc-link-lib=tpl");
     #[cfg(target_os = "linux")]

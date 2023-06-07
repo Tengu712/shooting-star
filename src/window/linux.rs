@@ -102,7 +102,8 @@ impl WindowApp {
         };
 
         // change the window title
-        let c_title = title.bytes().map(|c| c as c_char).collect::<Vec<c_char>>();
+        let mut c_title = title.bytes().map(|c| c as c_char).collect::<Vec<c_char>>();
+        c_title.push(0);
         let c_title = c_title.as_ptr();
         unsafe { XStoreName(display, window, c_title) };
 

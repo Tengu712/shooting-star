@@ -82,7 +82,7 @@ pub struct PushConstant {
     pub trs: [f32; 4],
     pub col: [f32; 4],
     pub uv: [f32; 4],
-    pub param: i32,
+    pub param: [i32; 4],
 }
 impl Default for PushConstant {
     fn default() -> Self {
@@ -92,7 +92,7 @@ impl Default for PushConstant {
             trs: [0.0; 4],
             col: [1.0; 4],
             uv: [0.0, 0.0, 1.0, 1.0],
-            param: 0,
+            param: [0; 4],
         }
     }
 }

@@ -15,7 +15,7 @@ fn check(p: Result<(), String>) {
 
 fn main() {
     // create sstar objects
-    let mut window_app = WindowApp::new("Sample Program\0", 640, 480);
+    let mut window_app = WindowApp::new("Sample Program", 640, 480);
     let mut vulkan_app = VulkanApp::new(&window_app, 10);
 
     // create and load an image texture

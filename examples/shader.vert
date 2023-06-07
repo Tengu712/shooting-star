@@ -6,7 +6,7 @@ layout(push_constant) uniform PushConstant {
     vec4 trs;
     vec4 col;
     vec4 uv;
-    int param;
+    ivec4 param;
 } constant;
 
 layout(binding=0) uniform UniformBuffer {

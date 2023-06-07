@@ -64,7 +64,9 @@ impl WindowApp {
         unsafe { AdjustWindowRect(&mut rect, style, 0) };
 
         // create a window
-        let title_utf16 = title.encode_utf16().collect::<Vec<u16>>().as_ptr();
+        let mut title_utf16 = title.encode_utf16().collect::<Vec<u16>>();
+        title_utf16.push(0);
+        let title_utf16 = title_utf16.as_ptr();
         let window = unsafe {
             CreateWindowExW(
                 0,

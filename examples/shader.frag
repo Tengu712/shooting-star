@@ -8,5 +8,5 @@ layout(location=1) in vec4 in_col;
 layout(location=0) out vec4 out_col;
 
 void main() {
-    out_col = texture(diffuse_map, in_uv);
+    out_col = texture(diffuse_map, in_uv) * in_col;
 }
