@@ -23,13 +23,12 @@ macro_rules! check_res {
 
 mod additions;
 mod common;
-pub mod image;
-mod load;
 pub mod math;
 mod new;
 mod obj;
 mod render;
 mod terminate;
+mod texture;
 
 use additions::*;
 use common::*;

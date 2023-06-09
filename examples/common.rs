@@ -1,7 +1,7 @@
 use sstar::{
     bitmap::{font::*, image::*},
     log::*,
-    vulkan::{image::*, *},
+    vulkan::*,
     window::*,
 };
 
@@ -20,8 +20,7 @@ fn main() {
 
     // create and load an image texture
     let image_bitmap = create_bitmap_from_file("./examples/image.png").unwrap();
-    check(load_image_texture(
-        &mut vulkan_app,
+    check(vulkan_app.load_image_texture(
         1,
         image_bitmap.width,
         image_bitmap.height,
@@ -48,8 +47,7 @@ fn main() {
         }
     }
     // create and load an image texture of the text
-    check(load_image_texture(
-        &mut vulkan_app,
+    check(vulkan_app.load_image_texture(
         2,
         texts_bitmap_width as u32,
         texts_bitmap_height as u32,
