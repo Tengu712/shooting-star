@@ -1,107 +1,66 @@
 use sstar::{
-    bitmap::{font::*, image::*},
+    app::{graphics::Position, SStarApp},
+    bitmap::font::GlyphRasterizer,
     log::*,
-    vulkan::*,
-    window::*,
+    vulkan::PushConstant,
+    window::Keycode,
 };
 
-#[inline(always)]
-fn check(p: Result<(), String>) {
-    match p {
-        Ok(n) => n,
-        Err(e) => ss_warning(&e),
-    }
-}
+const TEXT: &str =
+    "L'enfer est plein de bonnes volontés ou désirs.\n地獄への道は善意で舗装されている。";
 
 fn main() {
-    // create sstar objects
-    let mut window_app = WindowApp::new("Sample Program", 640, 480);
-    let mut vulkan_app = VulkanApp::new(&window_app, 10);
+    // create sstar app
+    let mut app = SStarApp::new("Sample Program", 640.0, 480.0, 10);
 
     // create and load an image texture
-    let image_bitmap = create_bitmap_from_file("./examples/image.png").unwrap();
-    check(vulkan_app.load_image_texture(
-        1,
-        image_bitmap.width,
-        image_bitmap.height,
-        &image_bitmap.data,
-    ));
+    app.load_image(1, "./examples/image.png");
 
-    // rasterize a text
-    let rasterizer = GlyphRasterizer::new("./examples/mplus-2p-medium.ttf").unwrap();
-    let text_bitmap = rasterizer.rasterize(
-        "L'enfer est plein de bonnes volontés ou désirs.\n地獄への道は善意で舗装されている。",
-        32.0,
-    );
-    // create bitmap and map the text
-    let texts_bitmap_width = 2_usize.pow((text_bitmap.width as f64).log2().ceil() as u32);
-    let texts_bitmap_height = 2_usize.pow((text_bitmap.height as f64).log2().ceil() as u32);
-    let mut texts_bitmap = vec![0; texts_bitmap_width * texts_bitmap_height * 4];
-    for j in 0..(text_bitmap.height as usize) {
-        for i in 0..(text_bitmap.width as usize) {
-            let idx = j * texts_bitmap_width + i;
-            texts_bitmap[idx * 4 + 0] = 255;
-            texts_bitmap[idx * 4 + 1] = 255;
-            texts_bitmap[idx * 4 + 2] = 255;
-            texts_bitmap[idx * 4 + 3] = text_bitmap.data[j * text_bitmap.width as usize + i];
-        }
-    }
-    // create and load an image texture of the text
-    check(vulkan_app.load_image_texture(
-        2,
-        texts_bitmap_width as u32,
-        texts_bitmap_height as u32,
-        &texts_bitmap,
-    ));
+    // create and load an texts texture
+    let gr = GlyphRasterizer::new("./examples/mplus-2p-medium.ttf").unwrap();
+    app.load_texts(&gr, 2, 32.0, &[TEXT]);
 
     // mainloop
     let mut cnt = 0;
-    while window_app.do_events() {
+    while app.update() {
         // get and check inputs
-        let enter = window_app.get_input(Keycode::Enter);
+        let enter = app.get_input(Keycode::Enter);
         if enter > 0 {
             ss_debug(&format!("enter {enter}"));
         }
-        let js_a = window_app.get_input(Keycode::JsButtonA);
+        let js_a = app.get_input(Keycode::JsButtonA);
         if js_a > 0 {
             ss_debug(&format!("js a {js_a}"));
         }
-        let js_laxis = window_app.get_axis_input(Keycode::JsAxisLX);
-        if js_laxis.abs() > 0.1 {
-            ss_debug(&format!("js left axis left {js_laxis}"));
-        }
+
+        // bind a image texture `"./example/image.png"`
+        app.bind_texture(1);
 
         // push constant for a rotating square
-        let mut pc_rotating = PushConstant::default();
-        pc_rotating.scl = [100.0, 100.0, 1.0, 0.0];
-        pc_rotating.trs = [100.0, 100.0, 0.0, 0.0];
-        pc_rotating.rot[0] = cnt as f32 / 180.0 * std::f32::consts::PI;
+        let mut pc = PushConstant::default();
+        pc.scl[0] = 100.0;
+        pc.scl[1] = 100.0;
+        pc.trs[0] = 100.0;
+        pc.trs[1] = 100.0;
+        pc.rot[0] = cnt as f32 / 180.0 * std::f32::consts::PI;
+        app.draw(pc, Position::Center);
+
+        // bind a texts texture `&[TEXT]`
+        app.bind_texture(2);
 
         // push constant for a text
-        let mut pc_text = PushConstant::default();
-        pc_text.scl = [
-            texts_bitmap_width as f32,
-            texts_bitmap_height as f32,
-            1.0,
-            0.0,
-        ];
+        let mut pc = PushConstant::default();
+        pc.trs[0] = 320.0;
+        pc.trs[1] = 200.0;
+        app.draw_text(pc, Position::CenterUI, 2, TEXT);
 
         // render
-        check(vulkan_app.render(
-            None,
-            &[
-                RenderTask::SetImageTexture(1),
-                RenderTask::Draw(pc_rotating),
-                RenderTask::SetImageTexture(2),
-                RenderTask::Draw(pc_text),
-            ],
-        ));
+        app.flush();
 
         // next loop
         cnt += 1;
     }
 
     // terminate
-    vulkan_app.terminate();
-    window_app.terminate();
+    app.terminate();
 }

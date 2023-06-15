@@ -1,11 +1,9 @@
-use sstar::{vulkan::*, window::*};
+use sstar::app::SStarApp;
 
 fn main() {
-    let mut window_app = WindowApp::new("Sample Program", 640, 480);
-    let vulkan_app = VulkanApp::new(&window_app, 10);
-    while window_app.do_events() {
-        vulkan_app.render(None, &[]).unwrap();
+    let mut app = SStarApp::new("Sample Program", 640.0, 480.0, 10);
+    while app.update() {
+        app.flush();
     }
-    vulkan_app.terminate();
-    window_app.terminate();
+    app.terminate();
 }

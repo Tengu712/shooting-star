@@ -71,6 +71,9 @@ void main() {
     pos = perse * pos;
 
     gl_Position = pos;
-    out_uv = in_uv;
+    out_uv = vec2(
+        constant.uv.x + (constant.uv.z - constant.uv.x) * in_uv.x,
+        constant.uv.y + (constant.uv.w - constant.uv.y) * in_uv.y
+    );
     out_col = constant.col;
 }
