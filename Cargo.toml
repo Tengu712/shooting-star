@@ -1,6 +1,6 @@
 [package]
 name = "sstar"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 license = "CC0-1.0"
 description = "A small frontend framework for 2D game."
@@ -13,3 +13,8 @@ documentation = "https://docs.rs/sstar"
 [build-dependencies]
 bindgen = "0.65.1"
 cc = "1.0.79"
+shaderc = "0.8"
+
+[features]
+default = []
+with-default-shaders = []

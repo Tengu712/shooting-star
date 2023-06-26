@@ -4,7 +4,7 @@
 
 A small frontend framework for game development. This framework is supported on Windows and Linux.
 
-## Preparation
+## Quick Start
 
 Install dependencies:
 
@@ -16,11 +16,34 @@ Install dependencies:
   * xinput
   * vulkan-1
 
-Write shaders:
+Create a project with Cargo. Then, add a following line to Cargo.toml:
+
+```
+[dependencies]
+sstar = { version = "0.1.5", features=["with-default-shaders"] }
+```
+
+Write main.rs as follow (this is a program that creates a window and clears it default color):
+
+```rust
+use sstar::app::SStarApp;
+
+fn main() {
+    let mut app = SStarApp::new("Sample Program", 640.0, 480.0, 10);
+    while app.update() {
+        app.flush();
+    }
+    app.terminate();
+}
+```
+
+## Vertex Shader Interface
+
+If you use a custom vertex shader, you should use following definitions:
 
 ```c
-/* vertex shader */
 #version 450
+
 layout(push_constant) uniform PushConstant {
     vec4 scl;
     vec4 rot;
@@ -29,52 +52,15 @@ layout(push_constant) uniform PushConstant {
     vec4 uv;
     ivec4 param;
 } constant;
+
 layout(binding=0) uniform UniformBuffer {
     mat4 view;
     mat4 perse;
     mat4 ortho;
 };
+
 layout(location=0) in vec3 in_pos;
 layout(location=1) in vec2 in_uv;
-/* omit outputs */
-void main() {
-    /* omit */
-}
-```
-```c
-/* fragment shader */
-#version 450
-layout(binding=1) uniform sampler2D diffuse_map;
-/* omit inputs */
-/* omit outputs */
-void main() {
-    /* omit */
-}
-```
-
-Compile shaders to `shader.vert.spv` and `shader.frag.spv` at runtime root directory:
-
-```
-$ glslc -o <runtime-root>/shader.vert.spv <vertex-shader>
-$ glslc -o <runtime-root>/shader.frag.spv <fragment-shader>
-```
-
-## Example
-
-Here is an example that creates a window and clears it default color:
-
-```rust
-use sstar::{vulkan::*, window::*};
-
-fn main() {
-    let mut window_app = WindowApp::new("Sample Program", 640, 480);
-    let vulkan_app = VulkanApp::new(&window_app, 10);
-    while window_app.do_events() {
-        vulkan_app.render(None, &[]).unwrap();
-    }
-    vulkan_app.terminate();
-    window_app.terminate();
-}
 ```
 
 ## License

@@ -60,12 +60,12 @@ pub fn create_perse(pov: f32, aspect: f32, near: f32, far: f32) -> [f32; 16] {
 /// A function to create a orthographic projection matrix.
 pub fn create_ortho(width: f32, height: f32, depth: f32) -> [f32; 16] {
     [
-        1.0 / width,
+        2.0 / width,
         0.0,
         0.0,
         0.0,
         0.0,
-        1.0 / height,
+        2.0 / height,
         0.0,
         0.0,
         0.0,

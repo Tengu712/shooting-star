@@ -67,8 +67,12 @@ void main() {
         1.0
     );
 
-    pos = view * pos;
-    pos = perse * pos;
+    if (constant.param.x == 1) {
+        pos = ortho * pos;
+    } else {
+        pos = view * pos;
+        pos = perse * pos;
+    }
 
     gl_Position = pos;
     out_uv = vec2(

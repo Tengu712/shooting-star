@@ -3,6 +3,7 @@
 pub mod app;
 pub mod bitmap;
 pub mod log;
+mod shaders;
 mod tpl;
 pub mod vulkan;
 pub mod window;

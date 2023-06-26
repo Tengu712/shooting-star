@@ -1,10 +1,9 @@
 use super::math::*;
 use super::*;
 
+use crate::shaders::*;
 use crate::window::WindowApp;
 
-use std::fs::File;
-use std::io::Read;
 use std::mem::size_of;
 use std::os::raw::{c_char, c_void};
 
@@ -487,28 +486,38 @@ impl VulkanApp {
         //     pipeline                                                                                              //
         // ========================================================================================================= //
 
-        let (vert_shader, frag_shader) = {
-            let create = |path| {
-                let mut file = File::open(path)
-                    .unwrap_or_else(|_| ss_error(&format!("failed to open {path}.")));
-                let mut bins = Vec::new();
-                file.read_to_end(&mut bins)
-                    .unwrap_or_else(|_| ss_error(&format!("failed to read {path}.")));
-                let ci = VkShaderModuleCreateInfo {
-                    sType: VkStructureType_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-                    pNext: null(),
-                    flags: 0,
-                    codeSize: bins.len(),
-                    pCode: bins.as_ptr() as *const u32,
-                };
-                let mut shader = null_mut();
-                check!(
-                    vkCreateShaderModule(device, &ci, null(), &mut shader),
-                    &format!("failed to create a shader from {path}.")
-                );
-                shader
+        let vert_shader = {
+            let bin = get_vertex_shader_binary();
+            let ci = VkShaderModuleCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                codeSize: bin.len(),
+                pCode: bin.as_ptr() as *const u32,
             };
-            (create("shader.vert.spv"), create("shader.frag.spv"))
+            let mut shader = null_mut();
+            check!(
+                vkCreateShaderModule(device, &ci, null(), &mut shader),
+                &format!("failed to create vertex shader.")
+            );
+            shader
+        };
+
+        let frag_shader = {
+            let bin = get_fragment_shader_binary();
+            let ci = VkShaderModuleCreateInfo {
+                sType: VkStructureType_VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                pNext: null(),
+                flags: 0,
+                codeSize: bin.len(),
+                pCode: bin.as_ptr() as *const u32,
+            };
+            let mut shader = null_mut();
+            check!(
+                vkCreateShaderModule(device, &ci, null(), &mut shader),
+                &format!("failed to create fragment shader.")
+            );
+            shader
         };
 
         let sampler = {
