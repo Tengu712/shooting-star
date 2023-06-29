@@ -1,6 +1,4 @@
 use std::env;
-use std::fs::File;
-use std::io::Write;
 use std::path::PathBuf;
 
 const COMMON_FUNCTION: &str = include_str!("./src/tpl/common/function.txt");
@@ -20,9 +18,6 @@ const OS_FUNCTION: &str = include_str!("./src/tpl/windows/function.txt");
 const OS_TYPE: &str = include_str!("./src/tpl/windows/type.txt");
 #[cfg(target_os = "windows")]
 const OS_VAR: &str = include_str!("./src/tpl/windows/var.txt");
-
-const VERTEX_SHADER: &str = include_str!("./src/shader.vert");
-const FRAGMENT_SHADER: &str = include_str!("./src/shader.frag");
 
 fn to_regx(s: &str) -> String {
     s.lines()
@@ -71,33 +66,4 @@ fn main() {
         println!("cargo:rustc-link-lib=Xinput");
         println!("cargo:rustc-link-lib=vulkan-1");
     }
-
-    // default shaders
-    let compiler = shaderc::Compiler::new().unwrap();
-    let vert_shader = compiler
-        .compile_into_spirv(
-            VERTEX_SHADER,
-            shaderc::ShaderKind::Vertex,
-            "shader.vert",
-            "main",
-            None,
-        )
-        .unwrap();
-    let frag_shader = compiler
-        .compile_into_spirv(
-            FRAGMENT_SHADER,
-            shaderc::ShaderKind::Fragment,
-            "shader.frag",
-            "main",
-            None,
-        )
-        .unwrap();
-    let mut file_vert_shader = File::create(out_path.join("shader.vert.spv")).unwrap();
-    file_vert_shader
-        .write_all(vert_shader.as_binary_u8())
-        .unwrap();
-    let mut file_frag_shader = File::create(out_path.join("shader.frag.spv")).unwrap();
-    file_frag_shader
-        .write_all(frag_shader.as_binary_u8())
-        .unwrap();
 }

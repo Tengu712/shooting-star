@@ -4,15 +4,9 @@ use std::fs::File;
 use std::io::Read;
 
 #[cfg(feature = "with-default-shaders")]
-const VERTEX_SHADER: Option<&'static [u8]> = Some(include_bytes!(concat!(
-    env!("OUT_DIR"),
-    "/shader.vert.spv"
-)));
+const VERTEX_SHADER: Option<&'static [u8]> = Some(include_bytes!("./shaders/shader.vert.spv"));
 #[cfg(feature = "with-default-shaders")]
-const FRAGMENT_SHADER: Option<&'static [u8]> = Some(include_bytes!(concat!(
-    env!("OUT_DIR"),
-    "/shader.frag.spv"
-)));
+const FRAGMENT_SHADER: Option<&'static [u8]> = Some(include_bytes!("./shaders/shader.frag.spv"));
 #[cfg(not(feature = "with-default-shaders"))]
 const VERTEX_SHADER: Option<&'static [u8]> = None;
 #[cfg(not(feature = "with-default-shaders"))]
