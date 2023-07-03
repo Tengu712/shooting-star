@@ -71,7 +71,7 @@ const SQUARE_IDXS: [u32; 6] = [0, 1, 2, 0, 2, 3];
 const DEF_IMG_TEX_WIDTH: u32 = 2;
 const DEF_IMG_TEX_HEIGHT: u32 = 2;
 const DEF_IMG_TEX_PIXELS: [u8; 16] = [
-    255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255, 255, 255, 0, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
 ];
 const DEF_IMG_TEX_PIXELS_SIZE: usize = size_of::<u8>() * DEF_IMG_TEX_PIXELS.len();
 

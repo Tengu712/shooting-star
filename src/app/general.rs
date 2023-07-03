@@ -30,11 +30,6 @@ impl SStarApp {
         // configure
         let scene_scale = graphics::configure(&mut settings);
         let js_map = input::configure(&mut settings);
-        if !settings.is_empty() {
-            for (k, _) in settings {
-                ss_warning(&format!("invalid key '{k}' found in settings.cfg."));
-            }
-        }
 
         // create instances
         let sw = (base_width * scene_scale) as u32;
@@ -44,6 +39,7 @@ impl SStarApp {
 
         // finish
         Self {
+            settings,
             scene_scale,
             base_width,
             base_height,
@@ -54,6 +50,10 @@ impl SStarApp {
             ub: None,
             tasks: Vec::new(),
         }
+    }
+    
+    pub fn get_setting(&self, key: &str) -> Option<String> {
+        self.settings.get(key).map(|n| n.clone())
     }
 
     pub fn update(&mut self) -> bool {

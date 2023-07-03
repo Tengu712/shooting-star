@@ -14,6 +14,7 @@ struct TextInfo {
 }
 
 pub struct SStarApp {
+    settings: HashMap<String, String>,
     /// A constant for adjusting the value of PushConstants based on the runtime scene size.
     /// It is 1.0 when the scene size is 1280x960.
     scene_scale: f32,

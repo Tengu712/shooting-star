@@ -5,8 +5,8 @@ use crate::log::*;
 pub enum Position {
     Center,
     CenterUI,
-    UpperLeftUI,
-    LowerRightUI,
+    TopLeftUI,
+    BottomRightUI,
 }
 
 pub(super) fn configure(settings: &mut HashMap<String, String>) -> f32 {
@@ -45,12 +45,12 @@ impl SStarApp {
                 pc.trs[1] -= self.base_height / 2.0;
                 pc.trs[2] = 0.0;
             }
-            Position::UpperLeftUI => {
+            Position::TopLeftUI => {
                 pc.trs[0] += pc.scl[0] / 2.0 - self.base_width / 2.0;
                 pc.trs[1] += pc.scl[1] / 2.0 - self.base_height / 2.0;
                 pc.trs[2] = 0.0;
             }
-            Position::LowerRightUI => {
+            Position::BottomRightUI => {
                 pc.trs[0] += -pc.scl[0] / 2.0 - self.base_width / 2.0;
                 pc.trs[1] += -pc.scl[1] / 2.0 - self.base_height / 2.0;
                 pc.trs[2] = 0.0;
@@ -107,13 +107,13 @@ impl SStarApp {
                     pc.trs[0] -= ox / 2.0;
                     pc.trs[1] -= pc.scl[1] / 2.0;
                 }
-                Position::UpperLeftUI => (),
-                Position::LowerRightUI => {
+                Position::TopLeftUI => (),
+                Position::BottomRightUI => {
                     pc.trs[0] -= ox;
                     pc.trs[1] -= pc.scl[1];
                 }
             }
-            self.draw(pc, Position::UpperLeftUI);
+            self.draw(pc, Position::TopLeftUI);
         }
     }
 }
