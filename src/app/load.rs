@@ -17,6 +17,11 @@ impl SStarApp {
             .unwrap_or_else(|e| ss_error(&e));
     }
 
+    /// A method to check if the texture `id` has been loaded.
+    pub fn check_texture_loaded(&self, id: usize) -> bool {
+        self.vulkan_app.check_image_texture_loaded(id)
+    }
+
     /// A method to load texts texture as `id`.
     pub fn load_texts(&mut self, gr: &GlyphRasterizer, id: usize, size: f32, txts: &[&str]) {
         if self.vulkan_app.check_image_texture_loaded(id) {
