@@ -228,6 +228,7 @@ impl VulkanApp {
         // present
         let mut res = 0;
         let swapchains = [self.swapchain];
+        let image_indices = [img_idx];
         let pi = VkPresentInfoKHR {
             sType: VkStructureType_VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             pNext: null(),
@@ -235,7 +236,7 @@ impl VulkanApp {
             pWaitSemaphores: signal_semaphores.as_ptr(),
             swapchainCount: swapchains.len() as u32,
             pSwapchains: swapchains.as_ptr(),
-            pImageIndices: [img_idx].as_ptr(),
+            pImageIndices: image_indices.as_ptr(),
             pResults: &mut res,
         };
         check_res!(
