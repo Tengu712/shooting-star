@@ -20,7 +20,7 @@ Create a project with Cargo. Then, add a following line to Cargo.toml:
 
 ```
 [dependencies]
-sstar = { version = "0.1.5", features=["with-default-shaders"] }
+sstar = { version = "0.1.9", features=["with-default-shaders"] }
 ```
 
 Write main.rs as follow (this is a program that creates a window and clears it default color):

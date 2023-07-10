@@ -7,7 +7,7 @@ use crate::{vulkan::*, window::*};
 
 use std::collections::HashMap;
 
-struct TextInfo {
+struct TexPartInfo {
     width: f32,
     height: f32,
     uv: [f32; 4],
@@ -22,7 +22,8 @@ pub struct SStarApp {
     base_height: f32,
     window_app: WindowApp,
     vulkan_app: VulkanApp,
-    text_infos: HashMap<usize, HashMap<String, TextInfo>>,
+    /// <texture id, <texture fragment id, texture fragment uv>>
+    uv_infos: HashMap<usize, HashMap<String, TexPartInfo>>,
     /// A hashmap to get a user configured joystick keycode from a keyboard keycode.
     js_map: HashMap<Keycode, Keycode>,
     /// It is passed to the VulkanApp::render method.

@@ -45,13 +45,13 @@ impl SStarApp {
             base_height,
             window_app,
             vulkan_app,
-            text_infos: HashMap::new(),
+            uv_infos: HashMap::with_capacity(max_tex_cnt as usize),
             js_map,
             ub: None,
             tasks: Vec::new(),
         }
     }
-    
+
     pub fn get_setting(&self, key: &str) -> Option<String> {
         self.settings.get(key).map(|n| n.clone())
     }

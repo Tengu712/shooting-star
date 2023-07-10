@@ -6,19 +6,32 @@ use sstar::{
     window::Keycode,
 };
 
+const UV_CIRCLE: [f32; 4] = [0.0, 0.0, 0.5, 1.0];
+const UV_RECT: [f32; 4] = [0.5, 0.0, 1.0, 1.0];
+const IMAGE_UVS: [(&str, [f32; 4]); 2] = [("circle", UV_CIRCLE), ("rect", UV_RECT)];
 const TEXT: &str =
     "L'enfer est plein de bonnes volontés ou désirs.\n地獄への道は善意で舗装されている。";
+const TEXTS: [&str; 1] = [TEXT];
+
+enum TextureID {
+    Image = 1,
+    Texts,
+}
 
 fn main() {
     // create sstar app
     let mut app = SStarApp::new("Sample Program", 640.0, 480.0, 10);
 
     // create and load an image texture
-    app.load_image(1, "./examples/image.png");
+    app.load_image(
+        TextureID::Image as usize,
+        "./examples/image.png",
+        &IMAGE_UVS,
+    );
 
     // create and load an texts texture
     let gr = GlyphRasterizer::new("./examples/mplus-2p-medium.ttf").unwrap();
-    app.load_texts(&gr, 2, 32.0, &[TEXT]);
+    app.load_texts(&gr, TextureID::Texts as usize, 32.0, &TEXTS);
 
     // mainloop
     let mut cnt = 0;
@@ -33,26 +46,47 @@ fn main() {
             ss_debug(&format!("js a {js_a}"));
         }
 
-        // bind a image texture `"./example/image.png"`
-        app.bind_texture(1);
+        // bind a texture
+        app.bind_texture(TextureID::Image as usize);
 
-        // push constant for a rotating square
-        let mut pc = PushConstant::default();
-        pc.scl[0] = 100.0;
-        pc.scl[1] = 100.0;
-        pc.trs[0] = 100.0;
-        pc.trs[1] = 100.0;
-        pc.rot[0] = cnt as f32 / 180.0 * std::f32::consts::PI;
-        app.draw(pc, Position::Center);
+        // draw a rotating circle
+        app.draw_part(
+            PushConstant {
+                scl: [100.0, 100.0, 1.0, 0.0],
+                rot: [cnt as f32 / 180.0 * std::f32::consts::PI, 0.0, 0.0, 0.0],
+                trs: [-100.0, 100.0, 0.0, 0.0],
+                ..Default::default()
+            },
+            Position::Center,
+            TextureID::Image as usize,
+            "circle",
+        );
 
-        // bind a texts texture `&[TEXT]`
-        app.bind_texture(2);
+        // draw a rect
+        app.draw_part(
+            PushConstant {
+                scl: [100.0, 100.0, 1.0, 0.0],
+                trs: [640.0, 480.0, 0.0, 0.0],
+                ..Default::default()
+            },
+            Position::BottomRightUI,
+            TextureID::Image as usize,
+            "rect",
+        );
 
-        // push constant for a text
-        let mut pc = PushConstant::default();
-        pc.trs[0] = 320.0;
-        pc.trs[1] = 200.0;
-        app.draw_text(pc, Position::CenterUI, 2, TEXT);
+        // bind a texture
+        app.bind_texture(TextureID::Texts as usize);
+
+        // draw a text
+        app.draw_part(
+            PushConstant {
+                trs: [320.0, 200.0, 0.0, 0.0],
+                ..Default::default()
+            },
+            Position::CenterUI,
+            TextureID::Texts as usize,
+            TEXT,
+        );
 
         // render
         app.flush();

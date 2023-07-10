@@ -4,8 +4,13 @@ use crate::bitmap::{font::*, image::*};
 use crate::log::*;
 
 impl SStarApp {
+    /// A method to check if the texture `id` has been loaded.
+    pub fn check_texture_loaded(&self, id: usize) -> bool {
+        self.vulkan_app.check_image_texture_loaded(id)
+    }
+
     /// A method to load image texture as `id`.
-    pub fn load_image(&mut self, id: usize, path: &str) {
+    pub fn load_image(&mut self, id: usize, path: &str, uvs: &[(&str, [f32; 4])]) {
         if self.vulkan_app.check_image_texture_loaded(id) {
             ss_warning(&format!("the texture {id} has already been loaded."));
             return;
@@ -15,11 +20,19 @@ impl SStarApp {
         self.vulkan_app
             .load_image_texture(id as usize, bitmap.width, bitmap.height, &bitmap.data)
             .unwrap_or_else(|e| ss_error(&e));
-    }
 
-    /// A method to check if the texture `id` has been loaded.
-    pub fn check_texture_loaded(&self, id: usize) -> bool {
-        self.vulkan_app.check_image_texture_loaded(id)
+        let mut map = HashMap::new();
+        for (i, n) in uvs {
+            map.insert(
+                i.to_string(),
+                TexPartInfo {
+                    width: 1.0,
+                    height: 1.0,
+                    uv: n.clone(),
+                },
+            );
+        }
+        self.uv_infos.insert(id, map);
     }
 
     /// A method to load texts texture as `id`.
@@ -62,7 +75,7 @@ impl SStarApp {
             let new_oy = oy + info.height as usize;
             map.insert(
                 key,
-                TextInfo {
+                TexPartInfo {
                     width: info.width as f32,
                     height: info.height as f32,
                     uv: [
@@ -77,7 +90,7 @@ impl SStarApp {
         }
 
         // register the map of text information
-        self.text_infos.insert(id, map);
+        self.uv_infos.insert(id, map);
 
         // load
         self.vulkan_app
@@ -86,7 +99,7 @@ impl SStarApp {
     }
 
     pub fn unload_texture(&mut self, id: usize) {
-        self.text_infos.remove(&id);
+        self.uv_infos.remove(&id);
         self.vulkan_app.unload_image_texture(id).unwrap();
     }
 }

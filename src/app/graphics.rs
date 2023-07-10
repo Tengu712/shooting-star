@@ -35,7 +35,6 @@ impl SStarApp {
         self.tasks.push(RenderTask::SetImageTexture(id));
     }
 
-    /// A method to push a task for drawing a rectangle.
     /// The size of the rectangle is automaticaly scaled based on the scene size.
     pub fn draw(&mut self, mut pc: PushConstant, pos: Position) {
         match pos {
@@ -64,9 +63,10 @@ impl SStarApp {
         self.tasks.push(RenderTask::Draw(pc));
     }
 
-    /// A method to push a task for drawing a text.
-    pub fn draw_text(&mut self, mut pc: PushConstant, pos: Position, id: usize, txt: &str) {
-        let info = self.text_infos.get(&id).map(|n| n.get(txt));
+    /// A method to push a task for drawing a part of binded texture.
+    /// WARNING: pc.uv will be overwritten.
+    pub fn draw_part(&mut self, mut pc: PushConstant, pos: Position, tex_id: usize, frag_id: &str) {
+        let info = self.uv_infos.get(&tex_id).map(|n| n.get(frag_id));
         if let Some(Some(info)) = info {
             pc.scl[0] *= info.width;
             pc.scl[1] *= info.height;
@@ -74,19 +74,19 @@ impl SStarApp {
             self.draw(pc, pos);
         } else {
             ss_warning(&format!(
-                "the texture {id} not loaded or the text '{txt}' not in it."
+                "the texture {tex_id} not loaded or the fragment '{frag_id}' not in it."
             ));
         }
     }
 
     /// A method to push a task for drawing a text directly.
     /// The texture `id` should be a texture atlas that collects charactors.
-    pub fn draw_chars(&mut self, pc: PushConstant, pos: Position, id: usize, txt: &str) {
+    pub fn draw_chars(&mut self, pc: PushConstant, pos: Position, tex_id: usize, txt: &str) {
         let mut ox = 0.0;
         let mut pcs = Vec::with_capacity(txt.chars().count());
         for c in txt.chars() {
             let s = c.to_string();
-            let info = self.text_infos.get(&id).map(|n| n.get(&s));
+            let info = self.uv_infos.get(&tex_id).map(|n| n.get(&s));
             if let Some(Some(info)) = info {
                 let mut pc = pc.clone();
                 pc.scl[0] *= info.width;
@@ -97,7 +97,7 @@ impl SStarApp {
                 ox += info.width;
             } else {
                 ss_warning(&format!(
-                    "the texture {id} not loaded or the text '{txt}' not in it."
+                    "the texture {tex_id} not loaded or the text '{txt}' not in it."
                 ));
             }
         }
